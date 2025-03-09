@@ -10,11 +10,13 @@ import subprocess
 from contextlib import asynccontextmanager
 
 import aiohttp
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+import uvicorn
 
-from pipecat.transports.services.helpers.daily_rest import DailyRESTHelper, DailyRoomParams
+from bot import DoctorSnowLeopardBot
 
 MAX_BOTS_PER_ROOM = 1
 
@@ -45,7 +47,7 @@ async def lifespan(app: FastAPI):
     cleanup()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -54,6 +56,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Create bot instance
+bot = DoctorSnowLeopardBot()
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")
@@ -115,19 +123,77 @@ def get_status(pid: int):
     return JSONResponse({"bot_id": pid, "status": status})
 
 
-if __name__ == "__main__":
-    import uvicorn
+# Add the bot's chat endpoint
+@app.websocket("/chat")
+async def chat_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            message = await websocket.receive_text()
+            # Process the message using bot
+            response = await bot.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are Doctor Snow Leopard, a friendly pediatrician snow leopard who helps children feel comfortable in medical settings. Keep your responses short, friendly, and appropriate for children."},
+                    {"role": "user", "content": message}
+                ],
+                max_tokens=150
+            )
+            result = response.choices[0].message.content
+            
+            # Update emotion based on content
+            if "happy" in result.lower() or "!" in result:
+                bot.current_emotion = "happy"
+            elif "?" in result:
+                bot.current_emotion = "listening"
+            else:
+                bot.current_emotion = "caring"
+                
+            # Generate speech using TTS if enabled
+            audio_data = None
+            if bot.tts_enabled:
+                try:
+                    audio_response = await bot.client.audio.speech.create(
+                        model="tts-1",
+                        voice=bot.tts_voice,
+                        input=result
+                    )
+                    # Convert to base64 for sending over WebSocket
+                    import base64
+                    audio_bytes = await audio_response.read()
+                    audio_data = base64.b64encode(audio_bytes).decode('utf-8')
+                except Exception as e:
+                    print(f"TTS error: {e}")
+            
+            # Send response to client
+            await websocket.send_json({
+                "text": result,
+                "emotion": bot.current_emotion,
+                "audio": audio_data
+            })
+    except Exception as e:
+        print(f"WebSocket error: {e}")
 
+
+@app.get("/")
+async def root():
+    return FileResponse("static/index.html")
+
+
+if __name__ == "__main__":
+    # Parse command line arguments
     default_host = os.getenv("HOST", "0.0.0.0")
     default_port = int(os.getenv("FAST_API_PORT", "7860"))
 
-    parser = argparse.ArgumentParser(description="Daily patient-intake FastAPI server")
+    parser = argparse.ArgumentParser(description="Doctor Snow Leopard FastAPI server")
     parser.add_argument("--host", type=str, default=default_host, help="Host address")
     parser.add_argument("--port", type=int, default=default_port, help="Port number")
     parser.add_argument("--reload", action="store_true", help="Reload code on change")
 
     config = parser.parse_args()
-    print(f"to join a test room, visit http://localhost:{config.port}/")
+    print(f"To interact with Doctor Snow Leopard, visit http://{config.host}:{config.port}/")
+    
+    # Run the server
     uvicorn.run(
         "server:app",
         host=config.host,
