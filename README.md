@@ -53,7 +53,7 @@ cp env.example .env # and add your credentials
 ## Run the server
 
 ```bash
-python server.py
+python3 main.py
 ```
 
 Then, visit `http://localhost:7860/` in your browser to start a chatbot session.
