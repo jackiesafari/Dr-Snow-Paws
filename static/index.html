@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Doctor Snow Leopard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        
+        #chat-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        #avatar-container {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #avatar-image {
+            max-width: 300px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            display: none; /* Hide the static image when video is active */
+        }
+        
+        #avatar-video {
+            max-width: 300px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        #chat-box {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .user-message {
+            background: #e3f2fd;
+            margin-left: 20%;
+        }
+        
+        .doctor-message {
+            background: #f5f5f5;
+            margin-right: 20%;
+        }
+        
+        #input-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .sticker {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px;
+            background: #fff3cd;
+            border-radius: 5px;
+        }
+        
+        .placeholder-avatar {
+            width: 300px;
+            height: 300px;
+            background: #f0f0f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            font-size: 24px;
+            color: #666;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        /* Emotion-based animations */
+        .emotion-happy #avatar-video {
+            animation: bounce 1s infinite;
+        }
+        
+        .emotion-caring #avatar-video {
+            animation: pulse 2s infinite;
+        }
+        
+        .emotion-listening #avatar-video {
+            transform: scale(1.05);
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        #emotion-display {
+            font-size: 18px;
+            color: #666;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="avatar-container">
+            <img id="avatar-image" 
+                 src="/static/assets/doctor_snow_leopard.png" 
+                 alt="Doctor Snow Leopard"
+                 style="width: 300px; height: auto;">
+            <video id="avatar-video" 
+                   width="300" 
+                   height="auto" 
+                   autoplay 
+                   loop 
+                   muted>
+                <source src="/static/assets/a084a8d3-56cc-4cb5-90ac-031710411944 2.MP4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div id="emotion-display"></div>
+        </div>
+        <div id="chat-box">
+            <div id="messages"></div>
+            <div id="input-container">
+                <input type="text" id="user-input" placeholder="Type your message...">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}/chat`);
+        const messagesDiv = document.getElementById('messages');
+        const inputField = document.getElementById('user-input');
+        const emotionDisplay = document.getElementById('emotion-display');
+        const avatarContainer = document.getElementById('avatar-container');
+        const avatarVideo = document.getElementById('avatar-video');
+        
+        // Function to update avatar based on emotion
+        function updateAvatarEmotion(emotion) {
+            // Remove all emotion classes
+            avatarContainer.classList.remove('emotion-happy', 'emotion-caring', 'emotion-listening');
+            
+            // Add the appropriate emotion class
+            if (emotion) {
+                avatarContainer.classList.add(`emotion-${emotion}`);
+            }
+            
+            // Update emotion display text
+            emotionDisplay.textContent = `Current emotion: ${emotion}`;
+        }
+        
+        // Function to sync video with speech
+        function syncVideoWithSpeech(isPlaying) {
+            if (isPlaying) {
+                // When speaking, ensure video is playing
+                if (avatarVideo.paused) {
+                    avatarVideo.play();
+                }
+            } else {
+                // When not speaking, you could pause or show a still frame
+                // For this implementation, we'll keep it playing for a seamless experience
+            }
+        }
+        
+        // Make sure video is loaded and playing
+        window.addEventListener('load', function() {
+            // Force video to load and play
+            avatarVideo.load();
+            avatarVideo.play().catch(e => {
+                console.error("Error playing video:", e);
+                // Show static image as fallback if video fails
+                document.getElementById('avatar-image').style.display = 'block';
+                avatarVideo.style.display = 'none';
+            });
+        });
+        
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            // Add message to chat
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message doctor-message';
+            messageDiv.textContent = data.text;
+            messagesDiv.appendChild(messageDiv);
+            
+            // Update emotion display and avatar
+            updateAvatarEmotion(data.emotion);
+            
+            // Play audio if available
+            if (data.audio) {
+                console.log("Playing audio response...");
+                const audio = new Audio('data:audio/mp3;base64,' + data.audio);
+                audio.play().catch(e => {
+                    console.error("Error playing audio:", e);
+                });
+            } else {
+                console.log("No audio data received");
+            }
+            
+            // Scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        };
+        
+        function sendMessage() {
+            const message = inputField.value;
+            if (message) {
+                // Add user message to chat
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message user-message';
+                messageDiv.textContent = message;
+                messagesDiv.appendChild(messageDiv);
+                
+                // Send to server
+                ws.send(message);
+                
+                // Clear input
+                inputField.value = '';
+                
+                // Scroll to bottom
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        }
+        
+        // Handle Enter key
+        inputField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

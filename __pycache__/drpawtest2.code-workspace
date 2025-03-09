@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../.vercel"
+		},
+		{
+			"path": "../assets"
+		},
+		{
+			"path": "../static"
+		},
+		{
+			"path": "../venv"
+		}
+	],
+	"settings": {}
+}

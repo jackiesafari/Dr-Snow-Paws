@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Doctor Snow Leopard</title>
+    <style>
+        #avatar-container {
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+        }
+        
+        #medical-room {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url('/assets/pediatric-room.jpg');
+            background-size: cover;
+        }
+        
+        #avatar-canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="avatar-container">
+        <div id="medical-room"></div>
+        <canvas id="avatar-canvas"></canvas>
+    </div>
+    
+    <script src="avatar_system.js"></script>
+    <script>
+        const avatar = new SnowLeopardAvatar();
+        
+        // Connect to WebSocket for real-time updates
+        const ws = new WebSocket('ws://localhost:8000/ws/' + clientId);
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'avatar_update') {
+                avatar.setExpression(data.data.emotion);
+            }
+        };
+    </script>
+</body>
+</html> 
