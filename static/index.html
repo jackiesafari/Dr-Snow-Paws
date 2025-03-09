@@ -151,6 +151,41 @@
             margin-top: 10px;
             transition: all 0.3s ease;
         }
+        
+        .ptt-button {
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin: 0 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+        }
+        
+        .ptt-button.recording {
+            background-color: #ff4b4b;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .ptt-icon {
+            font-size: 20px;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
     </style>
 </head>
 <body>
@@ -174,8 +209,13 @@
         <div id="chat-box">
             <div id="messages"></div>
             <div id="input-container">
-                <input type="text" id="user-input" placeholder="Type your message...">
-                <button onclick="sendMessage()">Send</button>
+                <div class="chat-input-container">
+                    <input type="text" id="user-input" placeholder="Type your message...">
+                    <button id="ptt-button" class="ptt-button">
+                        <span class="ptt-icon">🎤</span>
+                    </button>
+                    <button onclick="sendMessage()">Send</button>
+                </div>
             </div>
         </div>
     </div>
@@ -227,6 +267,9 @@
             });
         });
         
+        // Create audio element
+        const audioPlayer = new Audio();
+        
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
             
@@ -239,13 +282,13 @@
             // Update emotion display and avatar
             updateAvatarEmotion(data.emotion);
             
-            // Play audio if available
+            // Play audio if available - add error handling
             if (data.audio) {
-                console.log("Playing audio response...");
-                const audio = new Audio('data:audio/mp3;base64,' + data.audio);
-                audio.play().catch(e => {
-                    console.error("Error playing audio:", e);
-                });
+                try {
+                    playAudio(data.audio);
+                } catch (error) {
+                    console.error("Error playing audio:", error);
+                }
             } else {
                 console.log("No audio data received");
             }
@@ -253,6 +296,32 @@
             // Scroll to bottom
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         };
+        
+        function playAudio(audioBase64) {
+            // Check that audio data exists and has content
+            if (!audioBase64 || audioBase64.length === 0) {
+                console.error("Empty audio data received");
+                return;
+            }
+            
+            try {
+                // Convert base64 to blob
+                const byteCharacters = atob(audioBase64);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: 'audio/mp3' });
+                
+                // Create URL and play
+                const audioUrl = URL.createObjectURL(blob);
+                audioPlayer.src = audioUrl;
+                audioPlayer.play().catch(e => console.error("Audio play error:", e));
+            } catch (error) {
+                console.error("Error processing audio:", error);
+            }
+        }
         
         function sendMessage() {
             const message = inputField.value;
@@ -279,6 +348,105 @@
             if (e.key === 'Enter') {
                 sendMessage();
             }
+        });
+        
+        // Speech recognition setup
+        let recognition;
+        let isRecording = false;
+        
+        // Initialize speech recognition if supported
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+            } else if ('SpeechRecognition' in window) {
+                recognition = new SpeechRecognition();
+            } else {
+                console.error("Speech recognition not supported in this browser");
+                document.getElementById('ptt-button').style.display = 'none';
+                return false;
+            }
+            
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+            
+            recognition.onresult = function(event) {
+                const speechResult = event.results[0][0].transcript;
+                console.log('Speech recognized:', speechResult);
+                document.getElementById('user-input').value = speechResult;
+                
+                // Auto-send after speech recognition
+                sendMessage();
+            };
+            
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                stopRecording();
+            };
+            
+            recognition.onend = function() {
+                stopRecording();
+            };
+            
+            return true;
+        }
+        
+        function startRecording() {
+            if (!recognition && !initSpeechRecognition()) return;
+            
+            isRecording = true;
+            document.getElementById('ptt-button').classList.add('recording');
+            try {
+                recognition.start();
+                console.log('Recording started...');
+            } catch (error) {
+                console.error('Error starting speech recognition:', error);
+                stopRecording();
+            }
+        }
+        
+        function stopRecording() {
+            if (isRecording) {
+                isRecording = false;
+                document.getElementById('ptt-button').classList.remove('recording');
+                try {
+                    recognition.stop();
+                    console.log('Recording stopped');
+                } catch (error) {
+                    console.error('Error stopping speech recognition:', error);
+                }
+            }
+        }
+        
+        // Setup PTT button event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            const pttButton = document.getElementById('ptt-button');
+            
+            // Initialize speech recognition
+            initSpeechRecognition();
+            
+            // PTT button event handlers
+            pttButton.addEventListener('mousedown', function() {
+                startRecording();
+            });
+            
+            pttButton.addEventListener('mouseup', function() {
+                stopRecording();
+            });
+            
+            pttButton.addEventListener('mouseleave', function() {
+                stopRecording();
+            });
+            
+            // Touch support for mobile
+            pttButton.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                startRecording();
+            });
+            
+            pttButton.addEventListener('touchend', function() {
+                stopRecording();
+            });
         });
     </script>
 </body>

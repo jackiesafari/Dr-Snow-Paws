@@ -22,7 +22,6 @@ async def chat_endpoint(websocket: WebSocket):
         while True:
             # Receive message
             message = await websocket.receive_text()
-            print(f"Received message: {message}")
             
             # Generate response
             response = await bot.client.chat.completions.create(
@@ -34,11 +33,29 @@ async def chat_endpoint(websocket: WebSocket):
             )
             result = response.choices[0].message.content
             
-            # Send response back
-            await websocket.send_json({
-                "text": result,
-                "emotion": "caring"
-            })
+            # Determine emotion
+            emotion = "caring"
+            if "happy" in result.lower() or "!" in result:
+                emotion = "happy"
+            elif "?" in result:
+                emotion = "listening"
+            
+            # Generate speech (with error handling)
+            try:
+                audio_data = await bot.generate_speech(result)
+                # Send response back with audio
+                await websocket.send_json({
+                    "text": result,
+                    "emotion": emotion,
+                    "audio": audio_data
+                })
+            except Exception as e:
+                print(f"TTS Error: {e}")
+                # Send response without audio if TTS fails
+                await websocket.send_json({
+                    "text": result,
+                    "emotion": emotion
+                })
     except Exception as e:
         print(f"WebSocket error: {e}")
 

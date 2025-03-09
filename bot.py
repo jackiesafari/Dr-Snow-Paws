@@ -31,7 +31,7 @@ class DoctorSnowLeopardBot:
         
         # TTS settings
         self.tts_enabled = True
-        self.tts_voice = "nova"  # Child-friendly voice
+        self.tts_voice = "alloy"  # Options: alloy, echo, fable, onyx, nova, shimmer
         
         # Common responses
         self.responses = {
@@ -129,34 +129,32 @@ class DoctorSnowLeopardBot:
         except Exception as e:
             logger.error(f"WebSocket error: {e}")
 
-    async def generate_speech(self, text: str) -> str:
-        """Generate speech using OpenAI's TTS"""
+    async def generate_speech(self, text):
+        """Generate speech from text using OpenAI TTS API"""
         try:
-            # Clean text for TTS
-            clean_text = self.clean_text_for_tts(text)
-            logger.info(f"Generating speech for text: {clean_text}")
+            print(f"Generating speech for: {text[:30]}...")
             
-            # Generate speech
-            try:
-                response = await self.client.audio.speech.create(
-                    model="tts-1",
-                    voice=self.tts_voice,
-                    input=clean_text
-                )
-                logger.info("Speech generated successfully")
-                
-                # Convert to base64
-                audio_data = await response.read()
-                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                logger.info("Audio converted to base64")
-                return audio_base64
-                
-            except Exception as e:
-                logger.error(f"OpenAI TTS API error: {e}")
-                return None
+            # The create method IS async, we need to await it
+            response = await self.client.audio.speech.create(
+                model="tts-1",
+                voice=self.tts_voice,
+                input=text
+            )
             
+            # Get the binary audio data
+            audio_data = response.content
+            print(f"Generated audio data of size: {len(audio_data)} bytes")
+            
+            # Convert to base64 for sending over websocket
+            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+            print(f"Base64 audio data length: {len(audio_base64)}")
+            
+            return audio_base64
         except Exception as e:
-            logger.error(f"TTS error: {e}")
+            print(f"TTS Error: {e}")
+            print(f"Error type: {type(e)}")
+            import traceback
+            traceback.print_exc()
             return None
 
     def clean_text_for_tts(self, text: str) -> str:
