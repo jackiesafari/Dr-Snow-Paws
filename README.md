@@ -16,7 +16,7 @@ A friendly pediatrician snow leopard chatbot that helps make medical visits less
 
 ## Technical Stack
 
-Language: Python
+Language: Python (3.8 - 3.11 recommended)
 AI Model: OpenAI's GPT-4
 Text-to-Speech: Cartesia TTS Service
 Audio Processing: Silero VAD (Voice Activity Detection)
@@ -41,14 +41,70 @@ All collected information is logged for later use by medical professionals.
 
 ## Get started
 
+### Prerequisites
+- Python 3.8 - 3.11 (Python 3.13 is not yet supported)
+- pip
+- virtualenv or venv
+
+### Installation
+
 ```python
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # On Windows, use: venv\Scripts\activate
 pip install -r requirements.txt
 
 cp env.example .env # and add your credentials
-
 ```
+
+### Troubleshooting
+
+If you encounter build errors with pydantic-core:
+
+1. **Python Version Issues**
+   - The project supports Python 3.8 - 3.11
+   - If you're using Python 3.13 or another unsupported version, you'll need to switch to a supported version
+   - To check your Python version:
+     ```bash
+     python3 --version
+     ```
+   - To install Python 3.11 (recommended):
+     - On MacOS with Homebrew: `brew install python@3.11`
+     - On Ubuntu/Debian: `sudo apt install python3.11`
+     - On Windows: Download from [python.org](https://www.python.org/downloads/)
+
+2. **Build Dependencies**
+   - Install Rust toolchain if needed:
+     ```bash
+     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+     ```
+   - On MacOS, install XCode Command Line Tools:
+     ```bash
+     xcode-select --install
+     ```
+   - On Ubuntu/Debian:
+     ```bash
+     sudo apt-get update
+     sudo apt-get install build-essential python3-dev
+     ```
+
+3. **Clean Installation**
+   If you're still having issues:
+   ```bash
+   # Remove existing virtual environment
+   rm -rf venv
+   
+   # Create new virtual environment with specific Python version
+   python3.11 -m venv venv
+   
+   # Activate virtual environment
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   
+   # Upgrade pip
+   pip install --upgrade pip
+   
+   # Install requirements
+   pip install -r requirements.txt
+   ```
 
 ## Run the server
 
@@ -93,3 +149,87 @@ Your goal is to demonstrate these capabilities in a succinct way. Your output wi
     }
 ]
 ```
+
+## Avatar Animation Setup
+
+### 1. Emotion States
+The snow leopard doctor responds with different animations based on emotional states:
+- Happy (greeting, positive responses)
+- Listening (when patient is speaking)
+- Speaking (when delivering responses)
+- Thinking (when processing input)
+- Idle (default state)
+
+### 2. Implementation
+Place your animation files in:
+```
+project_root/
+├── static/
+│   ├── images/        # Fallback static images
+│   └── animations/    # Animation files for each state
+```
+
+### 3. Frontend Integration
+Add this to your HTML:
+
+```html:static/index.html
+<div class="avatar-container">
+  <video id="doctor-avatar" autoplay loop muted>
+    <source src="/static/animations/idle.mp4" type="video/mp4" id="avatar-source">
+    <!-- Fallback image -->
+    <img src="/static/images/doctor-snow-paws.png" alt="Doctor Snow Paws">
+  </video>
+</div>
+
+<script>
+const avatar = document.getElementById('doctor-avatar');
+const avatarSource = document.getElementById('avatar-source');
+
+// Function to change animation based on state
+function updateAvatarState(state) {
+  const animations = {
+    happy: '/static/animations/happy.mp4',
+    listening: '/static/animations/listening.mp4',
+    speaking: '/static/animations/speaking.mp4',
+    thinking: '/static/animations/thinking.mp4',
+    idle: '/static/animations/idle.mp4'
+  };
+  
+  avatarSource.src = animations[state];
+  avatar.load();
+  avatar.play();
+}
+
+// Example usage:
+// updateAvatarState('happy'); // When greeting
+// updateAvatarState('listening'); // When user is speaking
+// updateAvatarState('speaking'); // When doctor is speaking
+</script>
+
+<style>
+.avatar-container {
+  width: 300px;
+  height: 300px;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+#doctor-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+</style>
+
+### 4. Animation Files
+Required MP4 files for each state:
+- `static/animations/idle.mp4`
+- `static/animations/happy.mp4`
+- `static/animations/listening.mp4`
+- `static/animations/speaking.mp4`
+- `static/animations/thinking.mp4`
+
+You can create these animations using:
+- 3D animation software (Blender, Maya)
+- 2D animation tools (Adobe After Effects)
+- AI animation tools (D-ID, Synthesia)
