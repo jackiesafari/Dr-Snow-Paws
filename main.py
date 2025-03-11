@@ -1,3 +1,4 @@
+import os
 import uvicorn
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
@@ -10,8 +11,11 @@ app = FastAPI()
 # Create bot instance
 bot = DoctorSnowLeopardBot()
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Determine the static directory path
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+
+# Mount static files with absolute path
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # Add the bot's chat endpoint
 @app.websocket("/chat")
@@ -20,10 +24,10 @@ async def chat_endpoint(websocket: WebSocket):
 
 @app.get("/")
 async def root():
-    return FileResponse("static/index.html")
+    return FileResponse(os.path.join(static_dir, "index.html"))
 
-# Add this for Vercel - use Mangum class, not adapter module
-handler = Mangum(app)
+# Configure Mangum with specific options for Vercel
+handler = Mangum(app, lifespan="off")
 
 if __name__ == "__main__":
     # Use localhost with port 8080
