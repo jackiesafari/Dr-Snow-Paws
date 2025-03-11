@@ -7,3 +7,4 @@ httpx==0.25.1
 pydantic==2.5.2
 pydantic-core==2.14.5
 loguru
+mangum
