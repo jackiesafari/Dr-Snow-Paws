@@ -1,16 +1,19 @@
-FROM python:3.10-bullseye
-
-RUN mkdir /app
-RUN mkdir /app/assets
-RUN mkdir /app/utils
-COPY *.py /app/
-COPY requirements.txt /app/
-copy assets/* /app/assets/
-copy utils/* /app/utils/
+FROM python:3.11-slim
 
 WORKDIR /app
-RUN pip3 install -r requirements.txt
 
-EXPOSE 7860
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python3", "server.py"]
+# Copy the rest of the application
+COPY . .
+
+# Make sure the utils directory exists
+RUN mkdir -p /app/utils
+
+# Expose the port the app runs on
+EXPOSE 8080
+
+# Command to run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
