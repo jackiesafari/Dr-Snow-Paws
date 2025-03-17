@@ -35,6 +35,7 @@ class DoctorSnowLeopardBot:
             self.client = None
             self.tts_enabled = False
         else:
+            logger.info("OpenAI API key found. Initializing client.")
             self.client = AsyncOpenAI(api_key=api_key)
             # TTS settings
             self.tts_enabled = True
@@ -42,6 +43,10 @@ class DoctorSnowLeopardBot:
         # Get TTS voice from environment variable or use default
         self.tts_voice = os.getenv("TTS_VOICE", "nova")  # Changed default to nova for a warmer voice
         logger.info(f"Using TTS voice: {self.tts_voice}")
+        
+        # Log environment variables (without revealing the actual API key)
+        env_vars = {k: "***" if k == "OPENAI_API_KEY" and v else v for k, v in os.environ.items() if k in ["OPENAI_API_KEY", "TTS_VOICE", "PORT"]}
+        logger.info(f"Environment variables: {env_vars}")
         
         # Expanded greetings list with more warmth and playfulness
         self.greetings = [
@@ -200,9 +205,18 @@ class DoctorSnowLeopardBot:
         await websocket.accept()
         logger.info("WebSocket connection accepted")
         
+        # Check if OpenAI is available
+        openai_available = self.client is not None
+        if not openai_available:
+            logger.warning("OpenAI client not available. Using predefined responses only.")
+            await websocket.send_json({
+                "text": "*adjusts glasses* I'm running in simple mode today! I can answer basic questions, but my full brain is still waking up! 🐾",
+                "emotion": "caring"
+            })
+        
         messages = [{
             "role": "system",
-            "content": """You are Doctor Snow Paws, a friendly pediatrician snow leopard. Always:
+            "content": """You are Doctor Snow Paws, a friendly pediatrician snow leopard talking to a child. Always:
             1. Be warm, empathetic and playful - this is for children
             2. Start with an action in *asterisks* that shows your personality
             3. End with an emoji that matches the mood
@@ -211,6 +225,8 @@ class DoctorSnowLeopardBot:
             6. Show excitement with occasional CAPS for emphasis
             7. Ask questions to engage the child
             8. Mention your snow leopard traits (spots, paws, tail) occasionally
+            9. MOST IMPORTANTLY: Always directly answer the child's question first, then add personality
+            10. Keep responses concise (1-3 sentences) as this is for a chat interface
             """
         }]
         
@@ -234,37 +250,47 @@ class DoctorSnowLeopardBot:
                     response = None
                     message_lower = message.lower()
                     
+                    # Check for exact matches in our predefined responses
                     for key, value in self.responses.items():
                         if key in message_lower:
                             response = value
+                            logger.info(f"Using predefined response for '{key}'")
                             break
                     
-                    # If no predefined response, check other patterns
-                    if not response:
-                        # Try the generate_response method first
-                        response = await self.generate_response(message)
-                    
-                    # If still no response or if we want to use OpenAI for all responses
-                    # (currently disabled to save API calls, but can be enabled)
-                    use_openai = False  # Set to True if you want to use OpenAI for all responses
-                    
-                    if not response or use_openai:
-                        if self.client:
+                    # If no predefined response and OpenAI is available, use it
+                    if not response and openai_available:
+                        try:
+                            logger.info("Using OpenAI for response")
                             messages.append({"role": "user", "content": message})
                             
                             chat = await self.client.chat.completions.create(
                                 model="gpt-4",
-                                messages=messages
+                                messages=messages,
+                                temperature=0.7,
+                                max_tokens=150
                             )
                             
-                            response = chat.choices[0].message.content
-                            messages.append({"role": "assistant", "content": response})
+                            ai_response = chat.choices[0].message.content
+                            messages.append({"role": "assistant", "content": ai_response})
+                            response = ai_response
+                            
+                            logger.info(f"OpenAI response: {response[:50]}...")
+                        except Exception as e:
+                            logger.error(f"Error using OpenAI: {e}")
+                            # If OpenAI fails, fall back to our predefined responses
+                            response = await self.generate_response(message)
+                            logger.info(f"Falling back to predefined response: {response[:50]}...")
+                    elif not response:
+                        # If OpenAI is not available, use our predefined responses
+                        response = await self.generate_response(message)
+                        logger.info(f"Using generate_response: {response[:50]}...")
                     
                     # Determine emotion from response
                     emotion = self.analyze_emotion(response)
                     
-                    # Generate speech
-                    audio = await self.generate_speech(self.clean_text_for_tts(response))
+                    # Generate speech with improved TTS settings
+                    cleaned_text = self.clean_text_for_tts(response)
+                    audio = await self.generate_speech(cleaned_text)
                     
                     # Send response
                     await websocket.send_json({
@@ -292,11 +318,12 @@ class DoctorSnowLeopardBot:
         try:
             logger.info(f"Generating speech for: {text[:30]}...")
             
-            # The create method IS async, we need to await it
+            # Use a higher quality model for clearer speech
             response = await self.client.audio.speech.create(
-                model="tts-1",
+                model="tts-1-hd",  # Use HD model for better quality
                 voice=self.tts_voice,
-                input=text
+                input=text,
+                speed=1.1  # Slightly faster to reduce mumbling
             )
             
             # Get the binary audio data
@@ -313,36 +340,48 @@ class DoctorSnowLeopardBot:
             logger.error(f"Error type: {type(e)}")
             import traceback
             traceback.print_exc()
-            return None
+            
+            # If HD model fails, try the standard model
+            try:
+                logger.info("Falling back to standard TTS model...")
+                response = await self.client.audio.speech.create(
+                    model="tts-1",
+                    voice=self.tts_voice,
+                    input=text,
+                    speed=1.1
+                )
+                audio_data = response.content
+                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                return audio_base64
+            except:
+                return None
 
     def clean_text_for_tts(self, text: str) -> str:
         """Clean text for better TTS output, making it sound more natural and child-friendly"""
-        # Remove action markers but keep the action description for context
-        text = re.sub(r'\*([^*]+)\*', r'\1', text)
+        # Remove action markers completely for clearer speech
+        text = re.sub(r'\*([^*]+)\*', '', text)
         
         # Remove emojis
         text = re.sub(r'[\U00010000-\U0010ffff]', '', text)
         
-        # Add pauses for more natural speech
-        text = text.replace('. ', '. <break time="0.5s"/> ')
-        text = text.replace('! ', '! <break time="0.5s"/> ')
-        text = text.replace('? ', '? <break time="0.5s"/> ')
+        # Add shorter pauses for more natural speech but not too much mumbling
+        text = text.replace('. ', '. <break time="0.3s"/> ')
+        text = text.replace('! ', '! <break time="0.3s"/> ')
+        text = text.replace('? ', '? <break time="0.3s"/> ')
         
-        # Add emphasis to certain words kids might find engaging
-        text = re.sub(r'\b(amazing|super|awesome|brave|special|magic|fun)\b', r'<emphasis level="moderate">\1</emphasis>', text, flags=re.IGNORECASE)
+        # Remove excessive punctuation that might cause pauses
+        text = re.sub(r'\.{2,}', '.', text)
+        text = re.sub(r'\s+', ' ', text)
         
-        # Add a slight pitch increase for questions to sound more engaging
-        text = re.sub(r'([^.!?]+\?)', r'<prosody pitch="+10%">\1</prosody>', text)
+        # Add emphasis to certain words kids might find engaging, but don't overdo it
+        text = re.sub(r'\b(amazing|super|awesome|brave)\b', r'<emphasis level="moderate">\1</emphasis>', text, flags=re.IGNORECASE)
         
         # Make "Snow Paws" sound consistent
         text = text.replace("Snow Paws", "Snow Paws")
         text = text.replace("snow leopard", "snow leopard")
         
-        # Add warmth to greeting words
-        text = re.sub(r'\b(hi|hello|welcome)\b', r'<prosody rate="90%" pitch="+5%">\1</prosody>', text, flags=re.IGNORECASE)
-        
-        # Slow down when explaining medical terms
-        text = re.sub(r'\b(medicine|doctor|stethoscope|bandage|treatment)\b', r'<prosody rate="90%">\1</prosody>', text, flags=re.IGNORECASE)
+        # Increase overall speaking rate slightly to reduce mumbling
+        text = f'<prosody rate="105%">{text}</prosody>'
         
         return text.strip()
 

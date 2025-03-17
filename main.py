@@ -45,17 +45,21 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Create bot instance
 try:
+    logger.info("Initializing Dr. Snow Paws bot...")
     bot = DoctorSnowLeopardBot()
+    logger.info("Bot initialized successfully")
 except Exception as e:
     logger.error(f"Error initializing bot: {str(e)}", exc_info=True)
     bot = None
 
 # Determine the static directory path
 static_dir = os.path.join(os.path.dirname(__file__), "static")
+logger.info(f"Static directory: {static_dir}")
 
 # Mount static files with absolute path
 try:
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    logger.info("Static files mounted successfully")
 except Exception as e:
     logger.error(f"Error mounting static files: {str(e)}", exc_info=True)
 
@@ -72,7 +76,8 @@ async def chat_endpoint(websocket: WebSocket):
             await websocket.close()
         else:
             try:
-                # Use handle_chat instead of chat_endpoint
+                # Use handle_chat method which includes OpenAI integration and TTS
+                logger.info("Delegating to bot.handle_chat")
                 await bot.handle_chat(websocket)
             except WebSocketDisconnect:
                 logger.info("WebSocket disconnected")
@@ -99,7 +104,13 @@ async def root():
 # Add a health check endpoint
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    status = {
+        "status": "ok",
+        "bot_initialized": bot is not None,
+        "tts_enabled": bot.tts_enabled if bot else False,
+        "openai_available": bot.client is not None if bot else False
+    }
+    return status
 
 @app.get("/websocket-test")
 async def websocket_test():
