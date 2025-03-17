@@ -488,37 +488,36 @@
             }
         }
         
-        // Set up WebSocket
-        const socket = new WebSocket(`ws://${window.location.host}/chat`);
+        // Update WebSocket connection to use the current host
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/chat`;
         
-        socket.onopen = function() {
-            addSystemMessage("Connected to Dr. Snow Paws! 🐾");
+        const socket = new WebSocket(wsUrl);
+        
+        socket.onopen = function(event) {
+            console.log("Connected to WebSocket server");
+            document.getElementById('status').textContent = "Connected";
+            document.getElementById('status').style.color = "green";
+        };
+        
+        socket.onclose = function(event) {
+            console.log("Disconnected from WebSocket server");
+            document.getElementById('status').textContent = "Disconnected";
+            document.getElementById('status').style.color = "red";
+        };
+        
+        socket.onerror = function(error) {
+            console.error("WebSocket Error: ", error);
+            document.getElementById('status').textContent = "Error connecting";
+            document.getElementById('status').style.color = "red";
         };
         
         socket.onmessage = function(event) {
-            try {
-                const data = JSON.parse(event.data);
-                addDoctorMessage(data.text);
-                
-                if (data.audio) {
-                    playAudio(data.audio);
-                }
-                
-                if (data.emotion) {
-                    updateEmotion(data.emotion);
-                }
-            } catch (error) {
-                console.error("Error parsing message:", error);
-                addDoctorMessage(event.data);
-            }
-        };
-        
-        socket.onerror = function() {
-            addSystemMessage("Connection error. Please refresh the page. 😕");
-        };
-        
-        socket.onclose = function() {
-            addSystemMessage("Connection closed. Please refresh the page. 👋");
+            console.log("Message from server: ", event.data);
+            // Handle the message from the server
+            const message = JSON.parse(event.data);
+            // Display the message in the chat
+            displayMessage(message);
         };
         
         // Event listeners

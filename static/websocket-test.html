@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #status {
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        #log {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        .connected {
+            color: green;
+        }
+        .disconnected {
+            color: red;
+        }
+        .message {
+            margin-bottom: 5px;
+        }
+        .server {
+            color: blue;
+        }
+        .client {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    
+    <div id="status" class="disconnected">Disconnected</div>
+    
+    <div id="log"></div>
+    
+    <div>
+        <input type="text" id="message" placeholder="Type a message...">
+        <button id="send">Send</button>
+    </div>
+    
+    <script>
+        const logElement = document.getElementById('log');
+        const statusElement = document.getElementById('status');
+        const messageInput = document.getElementById('message');
+        const sendButton = document.getElementById('send');
+        
+        function log(message, type = '') {
+            const entry = document.createElement('div');
+            entry.className = `message ${type}`;
+            entry.textContent = message;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // Determine WebSocket URL based on current location
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/chat`;
+        
+        log(`Connecting to ${wsUrl}...`);
+        
+        let socket;
+        
+        function connect() {
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function() {
+                statusElement.textContent = 'Connected';
+                statusElement.className = 'connected';
+                log('Connection established', 'server');
+            };
+            
+            socket.onclose = function(event) {
+                statusElement.textContent = 'Disconnected';
+                statusElement.className = 'disconnected';
+                log(`Connection closed (code: ${event.code}, reason: ${event.reason || 'none'})`, 'error');
+                
+                // Try to reconnect after 5 seconds
+                setTimeout(connect, 5000);
+            };
+            
+            socket.onerror = function(error) {
+                log('WebSocket error', 'error');
+                console.error('WebSocket error:', error);
+            };
+            
+            socket.onmessage = function(event) {
+                log(`Received: ${event.data}`, 'server');
+            };
+        }
+        
+        connect();
+        
+        sendButton.addEventListener('click', function() {
+            const message = messageInput.value;
+            if (message && socket.readyState === WebSocket.OPEN) {
+                socket.send(message);
+                log(`Sent: ${message}`, 'client');
+                messageInput.value = '';
+            }
+        });
+        
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendButton.click();
+            }
+        });
+    </script>
+</body>
+</html> 

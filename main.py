@@ -1,6 +1,7 @@
 import os
 import uvicorn
 import logging
+import json
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -22,6 +23,16 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+# Add WebSocket CORS middleware
+@app.middleware("http")
+async def add_websocket_cors_headers(request, call_next):
+    response = await call_next(request)
+    if request.url.path == "/chat" and request.method == "OPTIONS":
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 # Add exception handler
 @app.exception_handler(Exception)
@@ -52,9 +63,13 @@ except Exception as e:
 @app.websocket("/chat")
 async def chat_endpoint(websocket: WebSocket):
     try:
+        logger.info("WebSocket connection attempt")
+        await websocket.accept()
+        logger.info("WebSocket connection accepted")
+        
         if bot is None:
-            await websocket.accept()
-            await websocket.send_text("Bot initialization failed. Please check server logs.")
+            logger.error("Bot initialization failed")
+            await websocket.send_text(json.dumps({"message": "Bot initialization failed. Please check server logs."}))
             await websocket.close()
         else:
             await bot.chat_endpoint(websocket)
@@ -62,10 +77,10 @@ async def chat_endpoint(websocket: WebSocket):
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
         try:
             if websocket.client_state.CONNECTED:
-                await websocket.send_text(f"An error occurred: {str(e)}")
+                await websocket.send_text(json.dumps({"message": f"An error occurred: {str(e)}"}))
                 await websocket.close()
-        except:
-            pass
+        except Exception as close_error:
+            logger.error(f"Error closing WebSocket: {str(close_error)}")
 
 @app.get("/")
 async def root():
@@ -82,6 +97,17 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+@app.get("/websocket-test")
+async def websocket_test():
+    try:
+        return FileResponse(os.path.join(static_dir, "websocket-test.html"))
+    except Exception as e:
+        logger.error(f"Error serving websocket-test.html: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"message": "Error serving test page", "detail": str(e)},
+        )
 
 # For serverless environments (like Vercel)
 handler = Mangum(app)
