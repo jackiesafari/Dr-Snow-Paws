@@ -78,6 +78,33 @@
             logElement.scrollTop = logElement.scrollHeight;
         }
         
+        function playAudio(base64Audio) {
+            if (!base64Audio) return;
+            
+            try {
+                log("Playing audio...", "server");
+                const audio = new Audio(`data:audio/mp3;base64,${base64Audio}`);
+                
+                audio.onplay = function() {
+                    log("Audio started playing", "server");
+                };
+                
+                audio.onended = function() {
+                    log("Audio finished playing", "server");
+                };
+                
+                audio.onerror = function(e) {
+                    log("Error playing audio: " + e, "error");
+                };
+                
+                audio.play().catch(e => {
+                    log("Error playing audio: " + e, "error");
+                });
+            } catch (error) {
+                log("Error creating audio element: " + error, "error");
+            }
+        }
+        
         // Determine WebSocket URL based on current location
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/chat`;
@@ -114,6 +141,11 @@
                     const data = JSON.parse(event.data);
                     if (data.text) {
                         log(`Received: ${data.text}`, 'server', data.emotion || '');
+                        
+                        // Play audio if available
+                        if (data.audio) {
+                            playAudio(data.audio);
+                        }
                     } else if (data.message) {
                         log(`Received: ${data.message}`, 'server', 'error');
                     } else {

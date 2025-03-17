@@ -184,3 +184,30 @@ You can create these animations using:
 - 3D animation software (Blender, Maya)
 - 2D animation tools (Adobe After Effects)
 - AI animation tools (D-ID, Synthesia)
+
+## Environment Variables
+
+The following environment variables need to be set:
+
+- `OPENAI_API_KEY`: Your OpenAI API key (required for GPT-4 and TTS functionality)
+- `TTS_VOICE`: The voice to use for TTS (optional, defaults to "alloy")
+
+### Setting up Environment Variables in Railway
+
+1. Go to your project in the Railway dashboard
+2. Click on the "Variables" tab
+3. Add the following variables:
+   - `OPENAI_API_KEY`: Your OpenAI API key
+   - `TTS_VOICE`: (Optional) The voice to use for TTS (alloy, echo, fable, onyx, nova, shimmer)
+
+### Setting up Environment Variables Locally
+
+1. Copy the `.env.example` file to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit the `.env` file and add your OpenAI API key:
+   ```
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```

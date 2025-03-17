@@ -419,13 +419,48 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
         
+        // Process received message
+        function processMessage(data) {
+            if (data.text) {
+                addDoctorMessage(data.text);
+                if (data.emotion) {
+                    updateEmotion(data.emotion);
+                }
+                
+                // Play audio if available
+                if (data.audio) {
+                    playAudio(data.audio);
+                }
+            } else if (data.message) {
+                addSystemMessage(data.message);
+            }
+        }
+        
         // Play audio
         function playAudio(base64Audio) {
             if (!base64Audio) return;
             
             try {
+                console.log("Playing audio...");
                 const audio = new Audio(`data:audio/mp3;base64,${base64Audio}`);
-                audio.play().catch(e => console.error("Error playing audio:", e));
+                
+                audio.onplay = function() {
+                    console.log("Audio started playing");
+                    updateEmotion('speaking');
+                };
+                
+                audio.onended = function() {
+                    console.log("Audio finished playing");
+                    updateEmotion('default');
+                };
+                
+                audio.onerror = function(e) {
+                    console.error("Error playing audio:", e);
+                };
+                
+                audio.play().catch(e => {
+                    console.error("Error playing audio:", e);
+                });
             } catch (error) {
                 console.error("Error creating audio element:", error);
             }
@@ -469,18 +504,6 @@
                 videoSource.src = videoPath;
                 avatarVideo.load();
                 avatarVideo.play().catch(e => console.error("Error playing video:", e));
-            }
-        }
-        
-        // Process received message
-        function processMessage(data) {
-            if (data.text) {
-                addDoctorMessage(data.text);
-                if (data.emotion) {
-                    updateEmotion(data.emotion);
-                }
-            } else if (data.message) {
-                addSystemMessage(data.message);
             }
         }
         

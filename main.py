@@ -64,21 +64,24 @@ except Exception as e:
 async def chat_endpoint(websocket: WebSocket):
     try:
         logger.info("WebSocket connection attempt")
-        await websocket.accept()
-        logger.info("WebSocket connection accepted")
         
         if bot is None:
+            await websocket.accept()
             logger.error("Bot initialization failed")
             await websocket.send_text(json.dumps({"text": "Bot initialization failed. Please check server logs.", "emotion": "default"}))
             await websocket.close()
         else:
             try:
-                await bot.chat_endpoint(websocket)
+                # Use handle_chat instead of chat_endpoint
+                await bot.handle_chat(websocket)
             except WebSocketDisconnect:
                 logger.info("WebSocket disconnected")
             except Exception as e:
                 logger.error(f"Error in bot chat endpoint: {str(e)}", exc_info=True)
-                await websocket.send_text(json.dumps({"text": f"An error occurred: {str(e)}", "emotion": "default"}))
+                try:
+                    await websocket.send_text(json.dumps({"text": f"An error occurred: {str(e)}", "emotion": "default"}))
+                except:
+                    logger.error("Failed to send error message to client")
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
 
