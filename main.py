@@ -27,7 +27,7 @@ async def root():
     return FileResponse(os.path.join(static_dir, "index.html"))
 
 # Configure Mangum with specific options for Vercel
-handler = Mangum(app, lifespan="off")
+handler = Mangum(app)
 
 if __name__ == "__main__":
     # Use localhost with port 8080

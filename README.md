@@ -56,55 +56,6 @@ pip install -r requirements.txt
 cp env.example .env # and add your credentials
 ```
 
-### Troubleshooting
-
-If you encounter build errors with pydantic-core:
-
-1. **Python Version Issues**
-   - The project supports Python 3.8 - 3.11
-   - If you're using Python 3.13 or another unsupported version, you'll need to switch to a supported version
-   - To check your Python version:
-     ```bash
-     python3 --version
-     ```
-   - To install Python 3.11 (recommended):
-     - On MacOS with Homebrew: `brew install python@3.11`
-     - On Ubuntu/Debian: `sudo apt install python3.11`
-     - On Windows: Download from [python.org](https://www.python.org/downloads/)
-
-2. **Build Dependencies**
-   - Install Rust toolchain if needed:
-     ```bash
-     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-     ```
-   - On MacOS, install XCode Command Line Tools:
-     ```bash
-     xcode-select --install
-     ```
-   - On Ubuntu/Debian:
-     ```bash
-     sudo apt-get update
-     sudo apt-get install build-essential python3-dev
-     ```
-
-3. **Clean Installation**
-   If you're still having issues:
-   ```bash
-   # Remove existing virtual environment
-   rm -rf venv
-   
-   # Create new virtual environment with specific Python version
-   python3.11 -m venv venv
-   
-   # Activate virtual environment
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   
-   # Upgrade pip
-   pip install --upgrade pip
-   
-   # Install requirements
-   pip install -r requirements.txt
-   ```
 
 ## Run the server
 
