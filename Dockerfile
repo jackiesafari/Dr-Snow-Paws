@@ -12,8 +12,11 @@ COPY . .
 # Make sure the utils directory exists
 RUN mkdir -p /app/utils
 
+# Set execute permissions on start.sh
+RUN chmod +x /app/start.sh
+
 # Expose the port the app runs on
 EXPOSE 8080
 
 # Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["./start.sh"]
