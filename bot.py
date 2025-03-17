@@ -15,6 +15,7 @@ from fastapi import WebSocket
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 import random
+import asyncio
 
 load_dotenv(override=True)
 logger.remove(0)
@@ -22,6 +23,9 @@ logger.add(sys.stderr, level="DEBUG")
 
 class DoctorSnowLeopardBot:
     def __init__(self):
+        self.name = "Dr. Snow Paws"
+        logger.info(f"{self.name} initialized")
+        
         self.current_emotion = "neutral"
         
         # Initialize OpenAI client
@@ -64,86 +68,95 @@ class DoctorSnowLeopardBot:
             logger.error(f"TTS service test failed: {e}")
             return False
 
-    async def chat_endpoint(self, websocket: WebSocket):
-        await websocket.accept()
-        logger.info("WebSocket connection accepted")  # Changed from self.logger to logger
+    async def chat_endpoint(self, websocket):
+        """
+        Handle WebSocket chat endpoint.
         
-        # Send initial greeting
-        initial_greeting = {
-            "text": random.choice(self.greetings),
-            "emotion": "happy",
-            "audio": None
-        }
-        await websocket.send_json(initial_greeting)
+        Args:
+            websocket: The WebSocket connection
+        """
+        # The connection is already accepted in main.py, so we don't need to accept it again
+        # Just send a welcome message
+        await self.send_message(websocket, "Hi there! I'm Dr. Snow Paws, your friendly pediatrician snow leopard. How can I help you today?", "happy")
         
         try:
-            while True:
-                # Receive message from client
-                message = await websocket.receive_text()
-                logger.info(f"Received message: {message}")  # Changed from self.logger to logger
+            # Listen for messages
+            async for message in websocket.iter_text():
+                logger.info(f"Received message: {message}")
                 
-                # Instead of calling process_message, we'll directly use handle_message logic here
-                # or call the handle_chat method
-                response = await self.process_message(message)
+                # Process the message and generate a response
+                response = await self.generate_response(message)
                 
-                # Send response back to client
-                await websocket.send_json(response)
-                logger.info(f"Sent response: {response}")  # Changed from self.logger to logger
+                # Send the response back
+                await self.send_message(websocket, response, "caring")
                 
         except Exception as e:
-            logger.error(f"WebSocket error: {e}")  # Changed from self.logger to logger
-        finally:
-            logger.info("WebSocket connection closed")  # Changed from self.logger to logger
+            logger.error(f"Error in chat: {str(e)}", exc_info=True)
+            await self.send_message(websocket, f"I'm sorry, something went wrong. Please try again later.", "default")
     
-    # Add the missing process_message method
-    async def process_message(self, message):
-        """Process incoming messages and generate responses"""
+    async def generate_response(self, message):
+        """
+        Generate a response to the user's message.
+        
+        Args:
+            message: The user's message
+            
+        Returns:
+            str: The bot's response
+        """
+        # Simple response logic for testing
+        greetings = ["hi", "hello", "hey", "howdy", "hiya"]
+        if any(greeting in message.lower() for greeting in greetings):
+            return "Hello there! How are you feeling today?"
+        
+        if "how are you" in message.lower():
+            return "I'm doing great! Ready to help you feel better. What brings you in today?"
+        
+        if any(word in message.lower() for word in ["hurt", "pain", "ouch", "ow"]):
+            return "I'm sorry to hear you're in pain. Can you tell me where it hurts and how long you've been feeling this way?"
+        
+        if any(word in message.lower() for word in ["scared", "afraid", "nervous"]):
+            return "It's okay to feel nervous about seeing the doctor. I'm here to help you, not to hurt you. We can take things slow."
+        
+        if "bye" in message.lower() or "goodbye" in message.lower():
+            return "Goodbye! I hope you feel better soon. Remember to take your medicine and get plenty of rest!"
+        
+        # Default responses
+        default_responses = [
+            "I see. Can you tell me more about that?",
+            "How long have you been feeling this way?",
+            "That's interesting. Have you noticed anything else unusual?",
+            "I understand. Is there anything else you'd like to share?",
+            "Thank you for telling me. Is there anything specific you're concerned about?"
+        ]
+        
+        return random.choice(default_responses)
+    
+    async def send_message(self, websocket, text, emotion="default"):
+        """
+        Send a message to the client.
+        
+        Args:
+            websocket: The WebSocket connection
+            text: The message text
+            emotion: The emotion to display (default, happy, caring, listening)
+        """
         try:
-            # Check for predefined responses
-            for key, value in self.responses.items():
-                if key in message.lower():
-                    audio = await self.generate_speech(value) if self.tts_enabled else None
-                    return {
-                        "text": value,
-                        "audio": audio,
-                        "emotion": self.analyze_emotion(value)
-                    }
-            
-            # If no predefined response, use OpenAI
-            messages = [
-                {
-                    "role": "system",
-                    "content": """You are Doctor Snow Leopard, a friendly pediatrician. Always:
-                    1. Answer questions directly
-                    2. Start with an action in *asterisks*
-                    3. End with an emoji
-                    4. Keep responses short and child-friendly
-                    """
-                },
-                {"role": "user", "content": message}
-            ]
-            
-            chat = await self.client.chat.completions.create(
-                model="gpt-4",
-                messages=messages
-            )
-            
-            response_text = chat.choices[0].message.content
-            audio = await self.generate_speech(response_text) if self.tts_enabled else None
-            
-            return {
-                "text": response_text,
-                "audio": audio,
-                "emotion": self.analyze_emotion(response_text)
+            # Create the message payload
+            payload = {
+                "text": text,
+                "emotion": emotion
             }
+            
+            # Send the message
+            await websocket.send_text(json.dumps(payload))
+            logger.info(f"Sent message: {text}")
+            
+            # Add a small delay to make the conversation feel more natural
+            await asyncio.sleep(0.5)
             
         except Exception as e:
-            logger.error(f"Error processing message: {e}")
-            return {
-                "text": "*tilts head* I didn't quite catch that. Could you try again? 🐆",
-                "emotion": "caring",
-                "audio": None
-            }
+            logger.error(f"Error sending message: {str(e)}", exc_info=True)
 
     async def handle_chat(self, websocket: WebSocket):
         await websocket.accept()

@@ -41,6 +41,15 @@
         .error {
             color: red;
         }
+        .happy {
+            background-color: #e6ffe6;
+        }
+        .caring {
+            background-color: #e6f2ff;
+        }
+        .listening {
+            background-color: #fff2e6;
+        }
     </style>
 </head>
 <body>
@@ -61,9 +70,9 @@
         const messageInput = document.getElementById('message');
         const sendButton = document.getElementById('send');
         
-        function log(message, type = '') {
+        function log(message, type = '', emotion = '') {
             const entry = document.createElement('div');
-            entry.className = `message ${type}`;
+            entry.className = `message ${type} ${emotion}`;
             entry.textContent = message;
             logElement.appendChild(entry);
             logElement.scrollTop = logElement.scrollHeight;
@@ -101,7 +110,18 @@
             };
             
             socket.onmessage = function(event) {
-                log(`Received: ${event.data}`, 'server');
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.text) {
+                        log(`Received: ${data.text}`, 'server', data.emotion || '');
+                    } else if (data.message) {
+                        log(`Received: ${data.message}`, 'server', 'error');
+                    } else {
+                        log(`Received: ${event.data}`, 'server');
+                    }
+                } catch (e) {
+                    log(`Received: ${event.data}`, 'server');
+                }
             };
         }
         

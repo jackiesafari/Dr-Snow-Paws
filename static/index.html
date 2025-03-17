@@ -472,12 +472,25 @@
             }
         }
         
+        // Process received message
+        function processMessage(data) {
+            if (data.text) {
+                addDoctorMessage(data.text);
+                if (data.emotion) {
+                    updateEmotion(data.emotion);
+                }
+            } else if (data.message) {
+                addSystemMessage(data.message);
+            }
+        }
+        
         // Send message
         function sendMessage() {
             const message = userInput.value.trim();
             if (!message) return;
             
             addUserMessage(message);
+            updateEmotion('listening');
             
             // Send to server
             if (socket.readyState === WebSocket.OPEN) {
@@ -496,28 +509,28 @@
         
         socket.onopen = function(event) {
             console.log("Connected to WebSocket server");
-            document.getElementById('status').textContent = "Connected";
-            document.getElementById('status').style.color = "green";
+            addSystemMessage("Connected to Dr. Snow Paws");
         };
         
         socket.onclose = function(event) {
             console.log("Disconnected from WebSocket server");
-            document.getElementById('status').textContent = "Disconnected";
-            document.getElementById('status').style.color = "red";
+            addSystemMessage("Disconnected from server. Please refresh the page.");
         };
         
         socket.onerror = function(error) {
             console.error("WebSocket Error: ", error);
-            document.getElementById('status').textContent = "Error connecting";
-            document.getElementById('status').style.color = "red";
+            addSystemMessage("Error connecting to server. Please refresh the page.");
         };
         
         socket.onmessage = function(event) {
             console.log("Message from server: ", event.data);
-            // Handle the message from the server
-            const message = JSON.parse(event.data);
-            // Display the message in the chat
-            displayMessage(message);
+            try {
+                const data = JSON.parse(event.data);
+                processMessage(data);
+            } catch (e) {
+                console.error("Error parsing message:", e);
+                addSystemMessage("Received invalid message from server.");
+            }
         };
         
         // Event listeners

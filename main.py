@@ -2,7 +2,7 @@ import os
 import uvicorn
 import logging
 import json
-from fastapi import FastAPI, WebSocket, Request
+from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -69,18 +69,18 @@ async def chat_endpoint(websocket: WebSocket):
         
         if bot is None:
             logger.error("Bot initialization failed")
-            await websocket.send_text(json.dumps({"message": "Bot initialization failed. Please check server logs."}))
+            await websocket.send_text(json.dumps({"text": "Bot initialization failed. Please check server logs.", "emotion": "default"}))
             await websocket.close()
         else:
-            await bot.chat_endpoint(websocket)
+            try:
+                await bot.chat_endpoint(websocket)
+            except WebSocketDisconnect:
+                logger.info("WebSocket disconnected")
+            except Exception as e:
+                logger.error(f"Error in bot chat endpoint: {str(e)}", exc_info=True)
+                await websocket.send_text(json.dumps({"text": f"An error occurred: {str(e)}", "emotion": "default"}))
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
-        try:
-            if websocket.client_state.CONNECTED:
-                await websocket.send_text(json.dumps({"message": f"An error occurred: {str(e)}"}))
-                await websocket.close()
-        except Exception as close_error:
-            logger.error(f"Error closing WebSocket: {str(close_error)}")
 
 @app.get("/")
 async def root():
