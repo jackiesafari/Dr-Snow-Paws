@@ -1,0 +1,16 @@
+# Virtual Environment
+venv/
+venv311/
+.venv/
+__pycache__/
+
+# IDE / Editor specific
+.vscode/
+.idea/
+
+# Mac specific
+.DS_Store
+
+# Test files
+test_audio_*.mp3
+test.mp3 
