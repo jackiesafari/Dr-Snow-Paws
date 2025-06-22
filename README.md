@@ -49,7 +49,7 @@ All collected information is logged for later use by medical professionals.
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd Dr-Snow-Paws
+cd drsnowpaws
 ```
 
 2. Create and activate a virtual environment:
@@ -83,7 +83,7 @@ cp .env.example .env
 
 1. Make sure you're in the project directory:
 ```bash
-cd Dr-Snow-Paws
+cd drsnowpaws
 ```
 
 2. Activate the virtual environment if not already activated:
@@ -106,7 +106,7 @@ http://localhost:8000
 If you encounter any issues:
 
 1. Make sure you're using Python 3.11 (not 3.13)
-2. Verify you're in the correct directory (Dr-Snow-Paws)
+2. Verify you're in the correct directory (drsnowpaws)
 3. Check that the virtual environment is activated
 4. Ensure port 8000 is not in use by another process
 5. Verify your OpenAI API key is set in the .env file
