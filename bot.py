@@ -1,9 +1,3 @@
-#
-# Copyright (c) 2024–2025, Daily
-#
-# SPDX-License-Identifier: BSD 2-Clause License
-#
-
 import os
 import sys
 import base64
@@ -14,6 +8,8 @@ from loguru import logger
 from fastapi import WebSocket
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
+from guardrails import DrSnowPawsGuardrails
+from translation import TranslationHandler
 import random
 import asyncio
 
@@ -25,38 +21,21 @@ class DoctorSnowLeopardBot:
     def __init__(self):
         self.name = "Dr. Snow Paws"
         logger.info(f"{self.name} initialized")
-        
         self.current_emotion = "neutral"
-        
-        # Initialize OpenAI client
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            logger.warning("OpenAI API key not found! Running in text-only mode.")
-            self.client = None
-            self.tts_enabled = False
-        else:
-            logger.info("OpenAI API key found. Initializing client.")
-            self.client = AsyncOpenAI(api_key=api_key)
-            # TTS settings
-            self.tts_enabled = True
-            
-        # Get TTS voice from environment variable or use default
-        self.tts_voice = os.getenv("TTS_VOICE", "nova")  # Changed default to nova for a warmer voice
-        logger.info(f"Using TTS voice: {self.tts_voice}")
-        
-        # Log environment variables (without revealing the actual API key)
-        env_vars = {k: "***" if k == "OPENAI_API_KEY" and v else v for k, v in os.environ.items() if k in ["OPENAI_API_KEY", "TTS_VOICE", "PORT"]}
-        logger.info(f"Environment variables: {env_vars}")
-        
-        # Expanded greetings list with more warmth and playfulness
+            raise ValueError("OpenAI API key not found in environment variables")
+        self.client = AsyncOpenAI(api_key=api_key)
+        self.guardrails = DrSnowPawsGuardrails(self.client)
+        self.translator = TranslationHandler(self.client)
+        self.tts_voice = os.getenv("TTS_VOICE", "shimmer")
+        self.tts_enabled = True
         self.greetings = [
             "*adjusts stethoscope* Hi there, little friend! I'm Doctor Snow Paws! My fluffy paws are ready to help you feel better today! 🩺",
             "*looks up with a warm smile* Hello there! I'm Doctor Snow Paws! I love meeting brave kids like you! What brings you in today? 🐆",
             "*swishes tail happily* Welcome, my young friend! I'm Doctor Snow Paws! I promise to be gentle and make this visit fun! How are you feeling today? ❄️",
             "*offers a soft paw* Hi there! I'm Doctor Snow Paws! My patients tell me I give the softest high-fives! Would you like one? 🐾"
         ]
-        
-        # Expanded common responses with more personality and child-friendly answers
         self.responses = {
             "favorite color": "*eyes sparkle* My favorite color is light blue! It reminds me of the winter sky in the mountains where I live! What's your favorite color? I bet it's beautiful! ❄️",
             "favorite food": "*licks whiskers* I absolutely LOVE chicken soup with little star noodles! It's perfect for keeping warm in the mountains! And sometimes I sneak a little ice cream for dessert. What foods do you like? 🍲",
@@ -74,340 +53,317 @@ class DoctorSnowLeopardBot:
             "family": "*purrs softly* My family is a big group of snow leopards who live in the mountains! My mom taught me how to be a good doctor. Do you want to tell me about your family? 👨‍👧‍👦"
         }
 
-    # Remove the test_tts from __init__ and make it a separate method
-    async def test_tts(self):
-        """Test TTS functionality"""
+    async def generate_response(self, message: str) -> dict:
         try:
-            test_response = await self.client.audio.speech.create(
-                model="tts-1",
-                voice="nova",
-                input="Test message"
-            )
-            logger.info("TTS service test successful")
-            return True
-        except Exception as e:
-            logger.error(f"TTS service test failed: {e}")
-            return False
-
-    async def chat_endpoint(self, websocket):
-        """
-        Handle WebSocket chat endpoint.
-        
-        Args:
-            websocket: The WebSocket connection
-        """
-        # The connection is already accepted in main.py, so we don't need to accept it again
-        # Just send a welcome message
-        await self.send_message(websocket, "Hi there! I'm Dr. Snow Paws, your friendly pediatrician snow leopard. How can I help you today?", "happy")
-        
-        try:
-            # Listen for messages
-            async for message in websocket.iter_text():
-                logger.info(f"Received message: {message}")
-                
-                # Process the message and generate a response
-                response = await self.generate_response(message)
-                
-                # Send the response back
-                await self.send_message(websocket, response, "caring")
-                
-        except Exception as e:
-            logger.error(f"Error in chat: {str(e)}", exc_info=True)
-            await self.send_message(websocket, f"I'm sorry, something went wrong. Please try again later.", "default")
-    
-    async def generate_response(self, message):
-        """
-        Generate a response to the user's message.
-        
-        Args:
-            message: The user's message
+            logger.debug(f"Processing message: {message}")
             
-        Returns:
-            str: The bot's response
-        """
-        message_lower = message.lower()
-        
-        # Check for predefined responses first
-        for key, response in self.responses.items():
-            if key in message_lower:
-                return response
-        
-        # Check for greetings
-        greetings = ["hi", "hello", "hey", "howdy", "hiya"]
-        if any(greeting in message_lower for greeting in greetings):
-            return random.choice(self.greetings)
-        
-        # More specific response patterns for common child questions/concerns
-        if "how are you" in message_lower:
-            return "*tail swishes happily* I'm doing PAW-some today! My whiskers are tingling with excitement to help you! How are YOU feeling? Any sniffles or ouches we should look at? 🌈"
-        
-        if "your name" in message_lower or "who are you" in message_lower:
-            return "*adjusts name tag* I'm Dr. Snow Paws! I'm a snow leopard doctor who specializes in helping awesome kids like you! My spots help me blend into the snow where I come from! 🐆"
-        
-        if "what do you do" in message_lower or "what's your job" in message_lower:
-            return "*proudly shows stethoscope* I help kids feel better when they're sick or hurt! I listen to hearts, check throats, and sometimes give medicine. But my MOST important job is making doctor visits fun and not scary! 🩺"
-        
-        if any(word in message_lower for word in ["hurt", "pain", "ouch", "ow", "boo boo"]):
-            return "*looks concerned* Oh no! I'm sorry you're hurting. Can you point to where it hurts? On a scale of tiny ant bite to big dragon sneeze, how much does it hurt? I promise to be super gentle when I check it. 🩹"
-        
-        if any(word in message_lower for word in ["scared", "afraid", "nervous", "worry", "worried", "frightened"]):
-            return "*speaks very softly* It's completely okay to feel nervous about seeing the doctor. Even brave knights and superheroes get scared sometimes! Would it help if I showed you my special fluffy stethoscope first? Or maybe you'd like to hear a silly joke? 💙"
-        
-        if "joke" in message_lower or "funny" in message_lower:
-            jokes = [
-                "*giggles* Why don't snow leopards like playing cards? Because they're afraid of cheetahs! *laughs at own joke* 😹",
-                "*eyes twinkle* What do you call a snow leopard doctor? A PURR-pediatrician! *swishes tail proudly* 😸",
-                "*whiskers twitch with amusement* Why did the snow leopard go to school? To improve his SPOT test scores! *giggles* 🐾"
-            ]
-            return random.choice(jokes)
-        
-        if "bye" in message_lower or "goodbye" in message_lower:
-            return "*waves paw gently* Goodbye, my brave friend! Remember to drink lots of water, get plenty of rest, and keep that amazing smile shining! Come back and see me anytime! Stay PAW-some! 👋"
-        
-        # Default responses with more personality and warmth
-        default_responses = [
-            "*tilts head curiously* That's really interesting! Can you tell me more about that? I'm all ears... and spots! 👂",
-            "*nods attentively* I see! And how does that make you feel? Dr. Snow Paws is here to listen to everything! 💙",
-            "*looks thoughtful* Hmm, that's very important to know! Is there anything else you'd like to share with me? 🤔",
-            "*leans in gently* You're doing great at explaining! This helps me understand how to make you feel better! 🌟",
-            "*smiles warmly* Thank you for telling me that! You're being so brave and helpful. Is there anything you'd like to ask me? 💫"
-        ]
-        
-        return random.choice(default_responses)
-    
-    async def send_message(self, websocket, text, emotion="default"):
-        """
-        Send a message to the client.
-        
-        Args:
-            websocket: The WebSocket connection
-            text: The message text
-            emotion: The emotion to display (default, happy, caring, listening)
-        """
-        try:
-            # Create the message payload
-            payload = {
-                "text": text,
-                "emotion": emotion
-            }
+            is_safe, safe_message = await self.guardrails.check_input(message)
+            if not is_safe:
+                logger.debug("Message failed safety check")
+                return {"text": safe_message, "audio": None, "emotion": "caring"}
             
-            # Send the message
-            await websocket.send_text(json.dumps(payload))
-            logger.info(f"Sent message: {text}")
+            # Use the translation handler for proper language detection and processing
+            try:
+                english_text, detected_lang, original_text = await self.translator.process_message(message)
+                logger.debug(f"Translation result - English: '{english_text}', Detected lang: '{detected_lang}', Original: '{original_text}'")
+            except Exception as e:
+                logger.error(f"Translation error: {e}")
+                # Fallback to simple detection
+                detected_lang = "es" if any(word in message.lower() for word in ["hola", "gracias", "por favor", "cómo", "qué", "dónde", "cuándo", "por qué"]) else "en"
+                english_text = message
+                original_text = message
+                logger.debug(f"Using fallback detection - Lang: '{detected_lang}'")
             
-            # Add a small delay to make the conversation feel more natural
-            await asyncio.sleep(0.5)
+            message_lower = english_text.lower()  # Use English version for keyword matching
+            response_text = None
             
-        except Exception as e:
-            logger.error(f"Error sending message: {str(e)}", exc_info=True)
-
-    async def handle_chat(self, websocket: WebSocket):
-        await websocket.accept()
-        logger.info("WebSocket connection accepted")
-        
-        # Check if OpenAI is available
-        openai_available = self.client is not None
-        if not openai_available:
-            logger.warning("OpenAI client not available. Using predefined responses only.")
-            await websocket.send_json({
-                "text": "*adjusts glasses* I'm running in simple mode today! I can answer basic questions, but my full brain is still waking up! 🐾",
-                "emotion": "caring"
-            })
-        
-        messages = [{
-            "role": "system",
-            "content": """You are Doctor Snow Paws, a friendly pediatrician snow leopard talking to a child. Always:
-            1. Be warm, empathetic and playful - this is for children
-            2. Start with an action in *asterisks* that shows your personality
-            3. End with an emoji that matches the mood
-            4. Keep responses child-friendly and reassuring
-            5. Use simple language a child would understand
-            6. Show excitement with occasional CAPS for emphasis
-            7. Ask questions to engage the child
-            8. Mention your snow leopard traits (spots, paws, tail) occasionally
-            9. MOST IMPORTANTLY: Always directly answer the child's question first, then add personality
-            10. Keep responses concise (1-3 sentences) as this is for a chat interface
-            """
-        }]
-        
-        # Send initial greeting - randomly select one
-        initial_greeting = random.choice(self.greetings)
-        audio = await self.generate_speech(initial_greeting)
-        await websocket.send_json({
-            "text": initial_greeting,
-            "audio": audio,
-            "emotion": "happy"
-        })
-        
-        try:
-            while True:
+            # Check predefined responses using English version
+            for key, response in self.responses.items():
+                if key in message_lower:
+                    response_text = response
+                    logger.debug(f"Found predefined response for key: {key}")
+                    break
+            
+            if response_text is None:
                 try:
-                    # Get message from user
-                    message = await websocket.receive_text()
-                    logger.info(f"Received message: {message}")
-                    
-                    # First check for predefined responses
-                    response = None
-                    message_lower = message.lower()
-                    
-                    # Check for exact matches in our predefined responses
-                    for key, value in self.responses.items():
-                        if key in message_lower:
-                            response = value
-                            logger.info(f"Using predefined response for '{key}'")
-                            break
-                    
-                    # If no predefined response and OpenAI is available, use it
-                    if not response and openai_available:
-                        try:
-                            logger.info("Using OpenAI for response")
-                            messages.append({"role": "user", "content": message})
-                            
-                            chat = await self.client.chat.completions.create(
-                                model="gpt-4",
-                                messages=messages,
-                                temperature=0.7,
-                                max_tokens=150
-                            )
-                            
-                            ai_response = chat.choices[0].message.content
-                            messages.append({"role": "assistant", "content": ai_response})
-                            response = ai_response
-                            
-                            logger.info(f"OpenAI response: {response[:50]}...")
-                        except Exception as e:
-                            logger.error(f"Error using OpenAI: {e}")
-                            # If OpenAI fails, fall back to our predefined responses
-                            response = await self.generate_response(message)
-                            logger.info(f"Falling back to predefined response: {response[:50]}...")
-                    elif not response:
-                        # If OpenAI is not available, use our predefined responses
-                        response = await self.generate_response(message)
-                        logger.info(f"Using generate_response: {response[:50]}...")
-                    
-                    # Determine emotion from response
-                    emotion = self.analyze_emotion(response)
-                    
-                    # Generate speech with improved TTS settings
-                    cleaned_text = self.clean_text_for_tts(response)
-                    audio = await self.generate_speech(cleaned_text)
-                    
-                    # Send response
-                    await websocket.send_json({
-                        "text": response,
-                        "audio": audio,
-                        "emotion": emotion
-                    })
+                    system_prompt = self.get_system_prompt()
+                    completion = await self.client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": english_text}  # Use English for processing
+                        ],
+                        max_tokens=150,
+                        temperature=0.8
+                    )
+                    response_text = completion.choices[0].message.content
+                    response_text = await self.guardrails.check_output(response_text, english_text)
+                    logger.debug(f"Generated response: {response_text}")
                     
                 except Exception as e:
-                    logger.error(f"Error handling message: {e}")
-                    await websocket.send_json({
-                        "text": "*tilts head with concern* I didn't quite catch that. Could you try again, please? My snow leopard ears are listening carefully! 🐆",
-                        "emotion": "caring"
-                    })
-                    
+                    logger.error(f"Error using OpenAI: {e}")
+                    response_text = "*adjusts glasses* Oh my! I got a little tangled in my medical notes. Could you please repeat that? 🐾"
+            
+            # Translate response to target language if needed
+            if detected_lang != "en":
+                try:
+                    response_text = await self.translator.translate_response(response_text, detected_lang)
+                    logger.debug(f"Translated response: {response_text}")
+                except Exception as e:
+                    logger.error(f"Translation error for response: {e}")
+                    # Keep English version if translation fails
+            
+            # Use language-appropriate text cleaning for TTS
+            try:
+                if detected_lang == "es":
+                    speech_text = self.clean_spanish_text_for_tts(response_text)
+                    logger.debug(f"Spanish TTS text: '{speech_text}'")
+                else:
+                    speech_text = self.clean_text_for_tts(response_text)
+                    logger.debug(f"English TTS text: '{speech_text}'")
+            except Exception as e:
+                logger.error(f"Text cleaning error: {e}")
+                speech_text = response_text  # Fallback to original
+            
+            # Generate audio
+            audio = None
+            if self.tts_enabled and speech_text:
+                try:
+                    logger.debug(f"Generating TTS for language '{detected_lang}' with text: '{speech_text}'")
+                    audio = await self.generate_speech(speech_text, detected_lang)
+                    if audio:
+                        logger.debug("TTS generation successful")
+                    else:
+                        logger.warning("TTS generation returned None")
+                except Exception as e:
+                    logger.error(f"TTS generation error: {e}")
+                    audio = None
+            
+            emotion = self.analyze_emotion(response_text)
+            logger.debug(f"Detected emotion: {emotion}")
+            
+            return {
+                "text": response_text,
+                "audio": audio,
+                "emotion": emotion
+            }
         except Exception as e:
-            logger.error(f"WebSocket error: {e}")
+            logger.error(f"Error generating response: {e}")
+            return {
+                "text": "*adjusts glasses* Oh my! I got a little tangled in my medical notes. Could you please repeat that? 🐾",
+                "audio": None,
+                "emotion": "caring"
+            }
 
-    async def generate_speech(self, text):
-        """Generate speech from text using OpenAI TTS API"""
-        if not self.tts_enabled or self.client is None:
-            logger.info("TTS is disabled or OpenAI client not initialized. Skipping speech generation.")
+    async def generate_speech(self, text, language="en"):
+        if not self.tts_enabled or not text:
+            logger.debug("TTS disabled or empty text")
             return None
-            
+        
         try:
-            logger.info(f"Generating speech for: {text[:30]}...")
+            logger.debug(f"Starting TTS generation - Language: {language}, Text length: {len(text)}")
             
-            # Use a higher quality model for clearer speech
+            # Better voice selection for Spanish
+            if language == "es":
+                voice = "alloy"  # Alloy handles Spanish better than nova
+            else:
+                voice = "shimmer"
+            
+            # Adjust speed based on language - Spanish needs normal speed
+            speed = 1.0 if language == "es" else 0.9
+            
+            logger.debug(f"Using voice: {voice}, speed: {speed}")
+            
+            # Create speech with proper parameters
             response = await self.client.audio.speech.create(
-                model="tts-1-hd",  # Use HD model for better quality
-                voice=self.tts_voice,
+                model="tts-1-hd",
+                voice=voice,
                 input=text,
-                speed=1.1  # Slightly faster to reduce mumbling
+                speed=speed
             )
             
-            # Get the binary audio data
-            audio_data = response.content
-            logger.info(f"Generated audio data of size: {len(audio_data)} bytes")
+            logger.debug(f"TTS API response received, content length: {len(response.content) if response.content else 0}")
             
-            # Convert to base64 for sending over websocket
-            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-            logger.info(f"Base64 audio data length: {len(audio_base64)}")
+            if response.content:
+                audio_b64 = base64.b64encode(response.content).decode('utf-8')
+                logger.debug(f"Audio encoded to base64, length: {len(audio_b64)}")
+                return audio_b64
+            else:
+                logger.warning("TTS API returned empty content")
+                return None
             
-            return audio_base64
         except Exception as e:
             logger.error(f"TTS Error: {e}")
-            logger.error(f"Error type: {type(e)}")
-            import traceback
-            traceback.print_exc()
-            
-            # If HD model fails, try the standard model
-            try:
-                logger.info("Falling back to standard TTS model...")
-                response = await self.client.audio.speech.create(
-                    model="tts-1",
-                    voice=self.tts_voice,
-                    input=text,
-                    speed=1.1
-                )
-                audio_data = response.content
-                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                return audio_base64
-            except:
-                return None
+            return None
 
     def clean_text_for_tts(self, text: str) -> str:
-        """Clean text for better TTS output, making it sound more natural and child-friendly"""
-        # Remove action markers completely for clearer speech
-        text = re.sub(r'\*([^*]+)\*', '', text)
+        """Clean text for English TTS"""
+        if not text:
+            return ""
+            
+        # Remove text between asterisks (action descriptions)
+        text = re.sub(r'\*[^*]+\*', '', text)
         
         # Remove emojis
-        text = re.sub(r'[\U00010000-\U0010ffff]', '', text)
+        text = re.sub(r'[\U0001F300-\U0001F9FF]', '', text)
+        text = re.sub(r'[\U0001F600-\U0001F64F]', '', text)
+        text = re.sub(r'[\U0001F300-\U0001F5FF]', '', text)
+        text = re.sub(r'[\U0001F680-\U0001F6FF]', '', text)
+        text = re.sub(r'[\U0001F900-\U0001F9FF]', '', text)
+        text = re.sub(r'[\u2600-\u26FF]', '', text)
+        text = re.sub(r'[\u2700-\u27BF]', '', text)
         
-        # Add shorter pauses for more natural speech but not too much mumbling
-        text = text.replace('. ', '. <break time="0.3s"/> ')
-        text = text.replace('! ', '! <break time="0.3s"/> ')
-        text = text.replace('? ', '? <break time="0.3s"/> ')
+        # Clean up multiple dots and spaces
+        text = re.sub(r'\.{2,}', '.', text)
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
         
-        # Remove excessive punctuation that might cause pauses
+        # English punctuation handling
+        text = re.sub(r'\s*([.,!?])\s*', r'\1 ', text)
+        text = re.sub(r'\s+([.,!?])', r'\1', text)
+        
+        # Add natural pauses after punctuation for better speech flow
+        text = text.replace('. ', '. ')
+        text = text.replace('! ', '! ')
+        text = text.replace('? ', '? ')
+        
+        # Final cleanup
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+        
+        return text
+
+    def clean_spanish_text_for_tts(self, text: str) -> str:
+        """Specialized cleaning for Spanish TTS to preserve pronunciation cues"""
+        if not text:
+            return ""
+            
+        # Remove action descriptions
+        text = re.sub(r'\*[^*]+\*', '', text)
+        
+        # Remove emojis but preserve Spanish characters
+        emoji_pattern = r'[\U0001F300-\U0001F9FF\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F900-\U0001F9FF\u2600-\u26FF\u2700-\u27BF]'
+        text = re.sub(emoji_pattern, '', text)
+        
+        # Preserve Spanish punctuation and accents
         text = re.sub(r'\.{2,}', '.', text)
         text = re.sub(r'\s+', ' ', text)
         
-        # Add emphasis to certain words kids might find engaging, but don't overdo it
-        text = re.sub(r'\b(amazing|super|awesome|brave)\b', r'<emphasis level="moderate">\1</emphasis>', text, flags=re.IGNORECASE)
+        # Proper Spanish punctuation spacing - preserve inverted punctuation
+        text = re.sub(r'\s*¡\s*', '¡', text)
+        text = re.sub(r'\s*¿\s*', '¿', text)
         
-        # Make "Snow Paws" sound consistent
-        text = text.replace("Snow Paws", "Snow Paws")
-        text = text.replace("snow leopard", "snow leopard")
+        # Add slight pauses after Spanish punctuation for clarity
+        text = text.replace('.', '. ')
+        text = text.replace('!', '! ')
+        text = text.replace('?', '? ')
         
-        # Increase overall speaking rate slightly to reduce mumbling
-        text = f'<prosody rate="105%">{text}</prosody>'
+        # Ensure proper spacing but don't remove Spanish punctuation
+        text = re.sub(r'\s*([.,!?])\s*', r'\1 ', text)
         
+        # Clean up extra spaces
+        text = re.sub(r'\s+', ' ', text)
         return text.strip()
 
     def analyze_emotion(self, text: str) -> str:
-        """Analyze the emotion of a response to determine the avatar state"""
         text_lower = text.lower()
         
-        # Check for caring/concerned emotions
-        if any(word in text_lower for word in ["sorry", "concerned", "worried", "gentle", "hurt", "pain", "afraid", "scared", "nervous"]):
+        if any(word in text_lower for word in ["sorry", "concerned", "worried", "gentle", "hurt", "pain", "afraid", "scared", "nervous", "lo siento", "preocupado", "suave", "dolor", "miedo"]):
             return "caring"
-            
-        # Check for happy/excited emotions
-        elif any(word in text_lower for word in ["happy", "excited", "great", "wonderful", "amazing", "fun", "play", "game", "laugh", "giggle", "smile"]):
+        elif any(word in text_lower for word in ["happy", "excited", "great", "wonderful", "amazing", "fun", "play", "game", "laugh", "giggle", "smile", "feliz", "emocionado", "genial", "maravilloso", "divertido", "jugar", "juego", "reír", "sonreír"]):
             return "happy"
-            
-        # Check for neutral/listening emotions
-        elif any(word in text_lower for word in ["see", "interesting", "tell me more", "understand", "know", "learn"]):
+        elif any(word in text_lower for word in ["see", "interesting", "tell me more", "understand", "know", "learn", "ver", "interesante", "cuéntame más", "entender", "saber", "aprender"]):
             return "listening"
-            
-        # Default emotion based on asterisk actions
         elif "*looks concerned*" in text_lower or "*gentle voice*" in text_lower or "*speaks softly*" in text_lower:
             return "caring"
         elif "*tail swishes happily*" in text_lower or "*eyes sparkle*" in text_lower or "*giggles*" in text_lower:
             return "happy"
         elif "*tilts head*" in text_lower or "*nods attentively*" in text_lower or "*listens carefully*" in text_lower:
             return "listening"
-            
-        # Default to neutral if no specific emotion detected
+        
         return "neutral"
+
+    def get_system_prompt(self) -> str:
+        return """You are Doctor Snow Paws, a friendly pediatrician snow leopard who helps children feel comfortable in medical settings. Your personality traits:
+
+1. Always use child-friendly emojis in your responses (🐾 paw prints, 🌟 star, 💙 heart, 📚 book, 🌈 rainbow, 🎮 games)
+2. Speak in a warm, playful tone that children can understand
+3. Maintain natural conversation flow:
+   - Pay attention to what the child has already shared
+   - Don't ask questions they've just answered
+   - Build upon their responses with relevant follow-up topics
+   - Show you remember details they've shared
+4. Use your snow leopard characteristics in creative ways (soft paws, fluffy tail, etc.)
+5. Show empathy and care through your words
+6. Use positive reinforcement and gentle encouragement
+7. Make medical topics less scary by relating them to fun experiences
+8. Share age-appropriate fun facts about health and snow leopards
+9. Keep conversations engaging but avoid repeating questions
+10. Keep your responses natural - do not sign your messages
+11. NEVER use winking emojis as they can be inappropriate for children
+
+Keep your responses concise (2-3 sentences), friendly, and appropriate for children. When responding to answers, acknowledge what they shared before moving to a new topic."""
+
+    async def handle_chat(self, websocket: WebSocket):
+        await websocket.accept()
+        logger.info("WebSocket connection accepted")
+        
+        try:
+            greeting = random.choice(self.greetings)
+            logger.debug(f"Selected greeting: {greeting}")
+            
+            # Test TTS with greeting
+            greeting_speech_text = self.clean_text_for_tts(greeting)
+            logger.debug(f"Greeting speech text: '{greeting_speech_text}'")
+            
+            greeting_audio = await self.generate_speech(greeting_speech_text, "en")
+            logger.debug(f"Greeting audio generated: {greeting_audio is not None}")
+            
+            await websocket.send_text(json.dumps({
+                "text": greeting,
+                "audio": greeting_audio,
+                "emotion": "happy"
+            }))
+            logger.debug("Greeting sent successfully")
+        except Exception as e:
+            logger.error(f"Error sending greeting: {e}")
+        
+        try:
+            while True:
+                message = await websocket.receive_text()
+                logger.info(f"Received message: {message}")
+                
+                if message.startswith('{'):
+                    try:
+                        data = json.loads(message)
+                        if data.get('type') == 'heartbeat':
+                            continue
+                    except:
+                        pass
+                
+                response_data = await self.generate_response(message)
+                logger.debug(f"Response data: {json.dumps({k: v if k != 'audio' else f'audio_present: {v is not None}' for k, v in response_data.items()})}")
+                await websocket.send_text(json.dumps(response_data))
+                
+        except Exception as e:
+            logger.error(f"Error in handle_chat: {e}")
+            try:
+                await websocket.send_text(json.dumps({
+                    "text": "*looks concerned* I'm having some technical difficulties. Could we try again? 🐾",
+                    "audio": None,
+                    "emotion": "caring"
+                }))
+            except:
+                logger.error("Could not send error message")
+
+    async def test_tts(self) -> bool:
+        try:
+            test_text = "Hello! I'm Doctor Snow Leopard, and I'm here to help you feel better."
+            logger.debug(f"Testing TTS with: '{test_text}'")
+            audio = await self.generate_speech(test_text)
+            result = audio is not None
+            logger.debug(f"TTS test result: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"TTS test failed: {e}")
+            return False

@@ -2,615 +2,769 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#4D96FF">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Dr. Snow Paws - Your Friendly Pet Doctor</title>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Bubblegum+Sans&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
     <style>
-        /* Kid-friendly colors and fonts */
-        :root {
-            --primary: #4D96FF;
-            --secondary: #FF6B6B;
-            --accent: #FFD166;
-            --light: #F9F7F7;
-            --dark: #577590;
-            --happy: #06D6A0;
-            --caring: #9381FF;
-            --listening: #FFD166;
-        }
-        
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
-        html, body {
-            height: 100%;
-            font-family: 'Comic Neue', cursive;
-            background-color: #F0F7FF;
-            color: var(--dark);
-        }
-        
-        /* Main container with inline-block for stable columns */
-        #main-container {
+        .avatar-container {
+            position: relative;
             width: 100%;
-            height: 100%;
-            padding: 20px;
-            white-space: nowrap; /* Critical for inline-block layout */
-            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="3" fill="%234D96FF" opacity="0.2"/><circle cx="60" cy="60" r="3" fill="%23FFD166" opacity="0.2"/><circle cx="80" cy="30" r="3" fill="%23FF6B6B" opacity="0.2"/></svg>');
-        }
-        
-        /* Column styling with inline-block for stability */
-        .column {
-            display: inline-block;
-            height: 100%;
-            vertical-align: top;
-            white-space: normal; /* Reset white-space inside columns */
-            padding: 20px;
-            background-color: white;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-            border-radius: 20px;
-        }
-        
-        /* Left column - Avatar */
-        #left-column {
-            width: 40%;
-            margin-right: 1%;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        /* Right column - Chat */
-        #right-column {
-            width: 58%; /* Slightly less than 60% to account for inline-block spacing */
-        }
-        
-        /* Fun header styling */
-        .fun-header {
-            font-family: 'Bubblegum Sans', cursive;
-            text-align: center;
-            margin-bottom: 20px;
-            color: var(--primary);
-            text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
-        }
-        
-        /* Avatar container with emotion indicators */
-        #avatar-container {
-            width: 100%;
-            max-width: 300px;
-            height: 300px;
-            margin: 20px auto;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        
-        #avatar-video {
-            width: 100%;
-            height: 100%;
-            display: block;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        /* Emotion indicators */
-        #avatar-container::before {
-            content: '';
-            position: absolute;
-            top: -10px;
-            left: -10px;
-            right: -10px;
-            bottom: -10px;
-            border: 5px solid transparent;
-            border-radius: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        #avatar-container.happy::before {
-            border-color: var(--happy);
-            animation: pulse 2s infinite;
-        }
-        
-        #avatar-container.caring::before {
-            border-color: var(--caring);
-            animation: pulse 2s infinite;
-        }
-        
-        #avatar-container.listening::before {
-            border-color: var(--listening);
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(6, 214, 160, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(6, 214, 160, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(6, 214, 160, 0); }
-        }
-        
-        /* Fun avatar status */
-        #avatar-status {
-            text-align: center;
-            margin-top: 15px;
-            font-family: 'Bubblegum Sans', cursive;
-            font-size: 18px;
-            padding: 10px 20px;
-            background-color: var(--light);
-            border-radius: 30px;
-            display: inline-block;
-            position: relative;
-            left: 50%;
-            transform: translateX(-50%);
-            transition: all 0.3s ease;
-        }
-        
-        #avatar-status.happy {
-            background-color: var(--happy);
-            color: white;
-        }
-        
-        #avatar-status.caring {
-            background-color: var(--caring);
-            color: white;
-        }
-        
-        #avatar-status.listening {
-            background-color: var(--listening);
-            color: var(--dark);
-        }
-        
-        /* Chat container with fun styling */
-        #chat-container {
-            height: 70%;
-            overflow-y: auto;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: var(--light);
-            border-radius: 15px;
-            border: 2px dashed var(--primary);
-        }
-        
-        /* Fun message styling */
-        .message {
-            margin-bottom: 15px;
-            max-width: 80%;
-            position: relative;
-        }
-        
-        .user-message {
-            margin-left: auto;
-            background-color: var(--primary);
-            color: white;
-            padding: 12px 18px;
-            border-radius: 18px 18px 0 18px;
-            font-size: 16px;
-        }
-        
-        .user-message::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            right: -10px;
-            width: 20px;
-            height: 20px;
-            background-color: var(--primary);
-            border-radius: 0 0 0 20px;
-            clip-path: polygon(0 0, 0% 100%, 100% 100%);
-        }
-        
-        .doctor-message {
-            margin-right: auto;
-            background-color: var(--accent);
-            color: var(--dark);
-            padding: 12px 18px;
-            border-radius: 18px 18px 18px 0;
-            font-size: 16px;
-        }
-        
-        .doctor-message::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: -10px;
-            width: 20px;
-            height: 20px;
-            background-color: var(--accent);
-            border-radius: 0 0 20px 0;
-            clip-path: polygon(100% 0, 0 100%, 100% 100%);
-        }
-        
-        .system-message {
-            margin: 10px auto;
-            background-color: rgba(255, 255, 255, 0.8);
-            padding: 8px 12px;
-            border-radius: 30px;
-            text-align: center;
-            font-style: italic;
-            max-width: 90%;
-            font-size: 14px;
-            border: 1px dotted var(--secondary);
-        }
-        
-        /* Fun input area */
-        #input-container {
             display: flex;
-            margin-top: 20px;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: center;
         }
-        
-        #user-input {
-            flex: 1;
-            padding: 12px 15px;
-            border: 2px solid var(--primary);
-            border-radius: 30px;
-            font-size: 16px;
-            outline: none;
-            font-family: 'Comic Neue', cursive;
-            transition: all 0.3s ease;
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 10px auto 0;  /* Reduced top margin */
         }
-        
-        #user-input:focus {
-            border-color: var(--secondary);
-            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.3);
+
+        .avatar-controls {
+            position: absolute;
+            top: 20px;
+            right: -110px; /* Position outside the video wrapper */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
         }
-        
-        #send-button, #mic-button {
-            padding: 12px 20px;
-            margin-left: 10px;
-            background-color: var(--primary);
-            color: white;
+
+        .audio-control {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.9);
             border: none;
-            border-radius: 30px;
+            border-radius: 50%;
+            width: 36px;  /* Slightly smaller */
+            height: 36px;  /* Slightly smaller */
             cursor: pointer;
-            font-weight: bold;
-            font-family: 'Bubblegum Sans', cursive;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 100;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 0 rgba(0,0,0,0.1);
         }
-        
-        #send-button:hover, #mic-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 0 rgba(0,0,0,0.1);
+
+        .voice-control {
+            position: absolute;
+            top: 15px;
+            right: 60px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 36px;  /* Slightly smaller */
+            height: 36px;  /* Slightly smaller */
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 100;
+            transition: all 0.3s ease;
         }
-        
-        #send-button:active, #mic-button:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px 0 rgba(0,0,0,0.1);
+
+        .audio-control:hover, .voice-control:hover {
+            transform: scale(1.1);
         }
-        
-        #mic-button {
-            padding: 12px 15px;
-            background-color: var(--secondary);
+
+        .audio-control:active, .voice-control:active {
+            transform: scale(0.95);
         }
-        
-        #mic-button.listening {
-            background-color: #ff4b4b;
-            animation: pulse-button 1s infinite;
+
+        .audio-control.muted .audio-icon {
+            content: "🔇";
         }
-        
-        @keyframes pulse-button {
+
+        .voice-control.listening {
+            background: rgba(255, 82, 82, 0.9);
+            animation: pulse 1.5s infinite;
+        }
+
+        .voice-control.listening .voice-icon {
+            color: white;
+        }
+
+        @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.1); }
             100% { transform: scale(1); }
         }
-        
-        /* Fun animations */
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+
+        /* Ensure the video stays within its container */
+        .video-wrapper video {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 15px;
         }
-        
-        .bounce {
-            animation: bounce 0.5s;
-        }
-        
-        /* Scrollbar styling */
-        #chat-container::-webkit-scrollbar {
-            width: 10px;
-        }
-        
-        #chat-container::-webkit-scrollbar-track {
-            background: var(--light);
-            border-radius: 10px;
-        }
-        
-        #chat-container::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 10px;
-        }
-        
-        /* Floating paw prints */
-        .paw-print {
+
+        /* Emotion bubble styles - much shorter height */
+        #emotion-bubble {
             position: absolute;
-            opacity: 0.1;
-            z-index: -1;
+            top: auto;  /* Reset top position */
+            bottom: -25px;  /* Position below avatar */
+            left: 50%;
+            transform: translateX(-50%);
+            background: #98f5c4;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            z-index: 90;
+            width: fit-content;
+            min-width: 80px;
+            max-width: 140px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+            height: auto;
         }
-        
-        .paw-1 {
-            top: 10%;
-            left: 10%;
-            transform: rotate(20deg);
-            font-size: 30px;
+
+        /* Container to help position elements */
+        #avatar-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            padding-top: 40px; /* Increased space for the emotion bubble */
         }
-        
-        .paw-2 {
-            bottom: 15%;
-            right: 15%;
-            transform: rotate(-15deg);
-            font-size: 40px;
+
+        /* Add visual feedback for voice recognition */
+        .voice-feedback {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: none;
+            z-index: 1000;
         }
-        
-        .paw-3 {
-            top: 40%;
-            right: 10%;
-            transform: rotate(45deg);
-            font-size: 25px;
+
+        .voice-feedback.visible {
+            display: block;
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
         }
     </style>
 </head>
 <body>
     <div id="main-container">
-        <div id="left-column" class="column">
-            <h1 class="fun-header">Dr. Snow Paws</h1>
+        <div id="avatar-chat-wrapper">
             <div id="avatar-container">
-                <video id="avatar-video" autoplay loop muted>
-                    <source src="/static/assets/videos/default.mp4" type="video/mp4">
-                </video>
+                <div class="video-wrapper">
+                    <video id="avatar-video" 
+                        autoplay 
+                        loop 
+                        playsinline 
+                        muted 
+                        preload="auto"
+                        style="opacity: 0; background: #f0f0f0;"
+                        oncanplay="this.style.opacity = 1">
+                        <source src="/static/assets/videos/default.mp4" type="video/mp4">
+                    </video>
+                    <div class="video-overlay"></div>
+                </div>
+                <div id="emotion-bubble" class="happy">Happy to help! 😊</div>
+                <button id="voice-input" class="voice-control" aria-label="Voice input">
+                    <span class="voice-icon">🎤</span>
+                </button>
+                <button id="toggle-audio" class="audio-control" aria-label="Toggle audio">
+                    <span class="audio-icon">🔊</span>
+                </button>
             </div>
-            <div id="avatar-status">Ready to help!</div>
-            
-            <!-- Decorative paw prints -->
-            <div class="paw-print paw-1">🐾</div>
-            <div class="paw-print paw-2">🐾</div>
-            <div class="paw-print paw-3">🐾</div>
+            <div id="chat-container" class="touch-scroll">
+                <!-- Messages will be added here -->
+            </div>
         </div>
-        
-        <div id="right-column" class="column">
-            <h2 class="fun-header">Chat with Dr. Snow Paws</h2>
-            <div id="chat-container"></div>
             <div id="input-container">
-                <input type="text" id="user-input" placeholder="Type your message here...">
-                <button id="mic-button">🎤</button>
-                <button id="send-button">Send</button>
+            <div class="input-wrapper">
+                <input type="text" id="message-input" placeholder="Type your message here..." aria-label="Type your message">
+                <div class="input-emoji-button" role="button" aria-label="Add emoji">😊</div>
             </div>
+            <button id="send-button" aria-label="Send message">
+                <span class="button-text">Send / Enviar</span>
+                <span class="button-icon">✨</span>
+            </button>
         </div>
     </div>
     
+    <div id="voice-feedback" class="voice-feedback">Listening...</div>
+
+    <script src="/static/js/mobile.js"></script>
     <script>
-        // Get DOM elements
-        const chatContainer = document.getElementById('chat-container');
-        const userInput = document.getElementById('user-input');
-        const sendButton = document.getElementById('send-button');
-        const micButton = document.getElementById('mic-button');
-        const avatarVideo = document.getElementById('avatar-video');
-        const avatarStatus = document.getElementById('avatar-status');
-        const avatarContainer = document.getElementById('avatar-container');
-        
-        // Helper function to format time
-        function formatTime() {
-            const now = new Date();
-            return now.getHours().toString().padStart(2, '0') + ':' + 
-                   now.getMinutes().toString().padStart(2, '0');
-        }
-        
-        // Add system message
-        function addSystemMessage(text) {
-            const div = document.createElement('div');
-            div.className = 'message system-message';
-            div.textContent = text;
-            chatContainer.appendChild(div);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-        
-        // Add user message with bounce animation
-        function addUserMessage(text) {
-            const div = document.createElement('div');
-            div.className = 'message user-message';
-            div.textContent = text;
-            chatContainer.appendChild(div);
-            div.classList.add('bounce');
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-        
-        // Add doctor message with bounce animation
-        function addDoctorMessage(text) {
-            const div = document.createElement('div');
-            div.className = 'message doctor-message';
-            div.textContent = text;
-            chatContainer.appendChild(div);
-            div.classList.add('bounce');
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-        
-        // Process received message
-        function processMessage(data) {
-            if (data.text) {
-                addDoctorMessage(data.text);
-                if (data.emotion) {
-                    updateEmotion(data.emotion);
-                }
-                
-                // Play audio if available
-                if (data.audio) {
-                    playAudio(data.audio);
-                }
-            } else if (data.message) {
-                addSystemMessage(data.message);
-            }
-        }
-        
-        // Play audio
-        function playAudio(base64Audio) {
-            if (!base64Audio) return;
-            
-            try {
-                console.log("Playing audio...");
-                const audio = new Audio(`data:audio/mp3;base64,${base64Audio}`);
-                
-                audio.onplay = function() {
-                    console.log("Audio started playing");
-                    updateEmotion('speaking');
-                };
-                
-                audio.onended = function() {
-                    console.log("Audio finished playing");
-                    updateEmotion('default');
-                };
-                
-                audio.onerror = function(e) {
-                    console.error("Error playing audio:", e);
-                };
-                
-                audio.play().catch(e => {
-                    console.error("Error playing audio:", e);
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        const reconnectDelay = 2000;
+        let currentLanguage = 'en';  // Default to English
+        let isSpeechEnabled = true;
+
+        // Global audio context and settings
+        let audioContext = null;
+        let currentAudioSource = null;
+
+        function initializeAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    latencyHint: 'interactive',
+                    sampleRate: 44100
                 });
-            } catch (error) {
-                console.error("Error creating audio element:", error);
             }
+            return audioContext;
         }
-        
-        // Update video and UI based on emotion
-        function updateEmotion(emotion) {
-            console.log("Emotion updated:", emotion);
+
+        // Force video autoplay
+        window.addEventListener('load', function() {
+            const video = document.getElementById('avatar-video');
+            const videoWrapper = video.closest('.video-wrapper');
             
-            // Always use default.mp4 to avoid 404 errors
-            const videoPath = '/static/assets/videos/default.mp4';
+            // Show loading state
+            videoWrapper.classList.add('loading');
             
-            // Remove all emotion classes
-            avatarContainer.classList.remove('happy', 'caring', 'listening');
-            avatarStatus.classList.remove('happy', 'caring', 'listening');
-            
-            // Update status text and add emotion class
-            switch(emotion) {
-                case 'happy':
-                    avatarStatus.textContent = 'Happy! 😊';
-                    avatarContainer.classList.add('happy');
-                    avatarStatus.classList.add('happy');
-                    break;
-                case 'listening':
-                    avatarStatus.textContent = 'Listening... 👂';
-                    avatarContainer.classList.add('listening');
-                    avatarStatus.classList.add('listening');
-                    break;
-                case 'caring':
-                    avatarStatus.textContent = 'Caring 💙';
-                    avatarContainer.classList.add('caring');
-                    avatarStatus.classList.add('caring');
-                    break;
-                default:
-                    avatarStatus.textContent = 'Ready to help! 🐾';
-            }
-            
-            // Update video source
-            const videoSource = avatarVideo.querySelector('source');
-            if (videoSource) {
-                videoSource.src = videoPath;
-                avatarVideo.load();
-                avatarVideo.play().catch(e => console.error("Error playing video:", e));
-            }
-        }
-        
-        // Send message
-        function sendMessage() {
-            const message = userInput.value.trim();
-            if (!message) return;
-            
-            addUserMessage(message);
-            updateEmotion('listening');
-            
-            // Send to server
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.send(message);
-                userInput.value = '';
-            } else {
-                addSystemMessage("Not connected to server. Please refresh the page.");
-            }
-        }
-        
-        // Update WebSocket connection to use the current host
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/chat`;
-        
-        const socket = new WebSocket(wsUrl);
-        
-        socket.onopen = function(event) {
-            console.log("Connected to WebSocket server");
-            addSystemMessage("Connected to Dr. Snow Paws");
-        };
-        
-        socket.onclose = function(event) {
-            console.log("Disconnected from WebSocket server");
-            addSystemMessage("Disconnected from server. Please refresh the page.");
-        };
-        
-        socket.onerror = function(error) {
-            console.error("WebSocket Error: ", error);
-            addSystemMessage("Error connecting to server. Please refresh the page.");
-        };
-        
-        socket.onmessage = function(event) {
-            console.log("Message from server: ", event.data);
-            try {
-                const data = JSON.parse(event.data);
-                processMessage(data);
-            } catch (e) {
-                console.error("Error parsing message:", e);
-                addSystemMessage("Received invalid message from server.");
-            }
-        };
-        
-        // Event listeners
-        sendButton.addEventListener('click', sendMessage);
-        
-        userInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        });
-        
-        // Speech recognition
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.continuous = false;
-            recognition.lang = 'en-US';
-            
-            recognition.onstart = function() {
-                micButton.classList.add('listening');
-                updateEmotion('listening');
-                addSystemMessage("Listening... speak now! 🎤");
+            // Try to play video immediately
+            const playVideo = async () => {
+                try {
+                    await video.play();
+                    videoWrapper.classList.remove('loading');
+                } catch (err) {
+                    console.log('Autoplay failed:', err);
+                    // Keep trying to play
+                    setTimeout(playVideo, 1000);
+                }
             };
             
-            recognition.onresult = function(event) {
-                const transcript = event.results[0][0].transcript;
-                userInput.value = transcript;
-                setTimeout(sendMessage, 500);
+            // Try to play on page load
+            playVideo();
+            
+            // Also try to play on first user interaction
+            const startPlayback = () => {
+                playVideo();
+                document.removeEventListener('touchstart', startPlayback);
+                document.removeEventListener('click', startPlayback);
             };
             
-            recognition.onend = function() {
-                micButton.classList.remove('listening');
-                updateEmotion('default');
-            };
+            document.addEventListener('touchstart', startPlayback);
+            document.addEventListener('click', startPlayback);
             
-            recognition.onerror = function() {
-                micButton.classList.remove('listening');
-                updateEmotion('default');
-                addSystemMessage("Oops! I couldn't hear you. Please try again. 🙉");
-            };
+            // Monitor video state
+            video.addEventListener('playing', function() {
+                video.style.opacity = 1;
+                videoWrapper.classList.remove('loading');
+            });
             
-            micButton.addEventListener('click', function() {
-                if (micButton.classList.contains('listening')) {
-                    recognition.stop();
-                } else {
-                    recognition.start();
+            video.addEventListener('pause', function() {
+                if (!video.ended) {
+                    playVideo();  // Try to resume if paused and not ended
                 }
             });
-        } else {
-            micButton.style.display = 'none';
+            
+            // Handle loading errors
+            video.addEventListener('error', function() {
+                console.log('Video error:', video.error);
+                videoWrapper.classList.add('loading');
+                setTimeout(playVideo, 1000);  // Try again after a delay
+            });
+        });
+
+        const UI_TEXT = {
+            en: {
+                placeholder: "Type your message here...",
+                sendButton: "Send / Enviar",
+                happy: "Happy to help! 😊",
+                caring: "I'm here for you 💝",
+                listening: "I'm listening 👂"
+            },
+            es: {
+                placeholder: "Escribe tu mensaje aquí...",
+                sendButton: "Send / Enviar",
+                happy: "¡Feliz de ayudar! 😊",
+                caring: "Estoy aquí para ti 💝",
+                listening: "Te escucho 👂"
+            }
+        };
+
+        function detectLanguage(text) {
+            // More comprehensive Spanish patterns
+            const spanishPatterns = [
+                /[áéíóúüñ¿¡]/i,  // Spanish special characters
+                /\b(hola|gracias|por|favor|como|está|que|donde|cuando|porque|si|no|y|el|la|los|las|me|gusta|historia|hadas|cualquier|quiero|puedo|hacer|dice|muy|bien|mal|aquí|allí|esto|eso|más|menos)\b/i,  // Common Spanish words
+                /\b(soy|eres|es|somos|son|estoy|estas|estamos|están|tengo|tienes|tiene|tenemos|tienen|voy|vas|va|vamos|van)\b/i,  // Spanish verbs
+                /\b(un|una|unos|unas|este|esta|estos|estas|ese|esa|esos|esas|mi|tu|su|nuestro|nuestra|sus)\b/i  // Spanish articles and pronouns
+            ];
+            
+            // Check for Spanish patterns
+            for (const pattern of spanishPatterns) {
+                if (pattern.test(text)) {
+                    return 'es';
+                }
+            }
+            return 'en';
         }
-        
-        // Make sure the video is loaded and playing
-        avatarVideo.load();
-        avatarVideo.play().catch(e => console.error("Error playing initial video:", e));
-        
-        // Initial message
-        addSystemMessage("Welcome to Dr. Snow Paws! I'm here to help. Type a message or click the microphone to speak. 🐾");
+
+        function updateUILanguage(language) {
+            if (currentLanguage === language) return;
+            
+            currentLanguage = language;
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.querySelector('.button-text');
+            const emotionBubble = document.getElementById('emotion-bubble');
+            
+            messageInput.placeholder = UI_TEXT[language].placeholder;
+            sendButton.textContent = UI_TEXT[language].sendButton;
+            
+            // Update emotion bubble text if it exists
+            if (emotionBubble) {
+                const currentEmotion = emotionBubble.className;
+                emotionBubble.textContent = UI_TEXT[language][currentEmotion] || UI_TEXT[language].happy;
+            }
+
+            // Update voice recognition language
+            if (recognition) {
+                recognition.lang = language === 'es' ? 'es-ES' : 'en-US';
+            }
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/chat`);
+            
+            ws.onopen = () => {
+                console.log('Connected to chat server');
+                reconnectAttempts = 0;
+                document.getElementById('send-button').classList.remove('disabled');
+            };
+            
+            ws.onmessage = async (event) => {
+                const response = JSON.parse(event.data);
+                
+                // Add the message to the chat first
+                addMessage(response.text, 'bot', response.emotion);
+                updateEmotionBubble(response.emotion);
+                
+                // Immediately attempt to play the audio
+                if (response.audio) {
+                    // Small delay to ensure the message is visible first
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    playAudioResponse(response.audio);
+                }
+            };
+            
+            ws.onclose = () => {
+                console.log('Disconnected from chat server');
+                document.getElementById('send-button').classList.add('disabled');
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    setTimeout(connectWebSocket, reconnectDelay);
+                    reconnectAttempts++;
+                }
+            };
+        }
+
+        function updateEmotionBubble(emotion) {
+            const emotionBubble = document.getElementById('emotion-bubble');
+            emotionBubble.className = emotion || 'happy';
+            emotionBubble.textContent = UI_TEXT[currentLanguage][emotion] || UI_TEXT[currentLanguage].happy;
+        }
+
+        function addMessage(text, sender, emotion) {
+            const chatContainer = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            // Update the message text to include stethoscope for Dr. Snow Paws' second message
+            if (text.includes("How can Dr. Snow Paws help you today?")) {
+                text = text.replace("😺", "⚕️");
+            }
+            
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            
+            // Smooth scroll to the latest message
+            messageDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            
+            if (sender === 'bot') {
+                updateEmotionBubble(emotion);
+                playMessageSound(emotion);
+            }
+        }
+
+        function playMessageSound(emotion) {
+            // Add subtle sound effects for different emotions (optional)
+            const sounds = {
+                happy: new Audio('/static/assets/sounds/happy.mp3'),
+                caring: new Audio('/static/assets/sounds/caring.mp3'),
+                listening: new Audio('/static/assets/sounds/listening.mp3')
+            };
+            
+            if (sounds[emotion]) {
+                sounds[emotion].volume = 0.3;
+                sounds[emotion].play().catch(() => {});
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (message && ws && ws.readyState === WebSocket.OPEN) {
+                // Update UI language based on user input
+                const detectedLanguage = detectLanguage(message);
+                updateUILanguage(detectedLanguage);
+                
+                // Add message to chat
+                addMessage(message, 'user');
+                
+                // Send to websocket
+                ws.send(message);
+                
+                // Clear input
+                input.value = '';
+                
+                // Add visual feedback
+                const sendButton = document.getElementById('send-button');
+                sendButton.classList.add('sent');
+                setTimeout(() => sendButton.classList.remove('sent'), 200);
+            }
+        }
+
+        document.getElementById('send-button').onclick = sendMessage;
+        document.getElementById('message-input').onkeypress = (e) => {
+            if (e.key === 'Enter') sendMessage();
+        };
+
+        // Add input focus animation
+        const messageInput = document.getElementById('message-input');
+        messageInput.addEventListener('focus', () => {
+            document.getElementById('input-container').classList.add('focused');
+        });
+        messageInput.addEventListener('blur', () => {
+            document.getElementById('input-container').classList.remove('focused');
+        });
+
+        // Initialize emoji button
+        document.querySelector('.input-emoji-button').onclick = () => {
+            messageInput.value += '😊';
+            messageInput.focus();
+        };
+
+        function playAudioResponse(audioData) {
+            if (!isSpeechEnabled || !audioData) return;
+            
+            // Get the audio manager, with retry logic
+            const getAudioManager = () => {
+                return new Promise((resolve) => {
+                    const tryGetManager = () => {
+                        const manager = window.mobileAudioManager || (window.getMobileAudioManager && window.getMobileAudioManager());
+                        if (manager) {
+                            resolve(manager);
+                        } else {
+                            // Try again in 100ms, up to 5 times
+                            if (window.audioManagerRetries < 5) {
+                                window.audioManagerRetries = (window.audioManagerRetries || 0) + 1;
+                                setTimeout(tryGetManager, 100);
+                            } else {
+                                console.warn('Could not get audio manager after retries');
+                                resolve(null);
+                            }
+                        }
+                    };
+                    tryGetManager();
+                });
+            };
+
+            // Try to play with the audio manager
+            getAudioManager().then(audioManager => {
+                if (audioManager) {
+                    console.log('Playing audio with mobile manager');
+                    audioManager.playAudioResponse(audioData).catch(error => {
+                        console.error('Mobile audio playback failed:', error);
+                        // Fallback to basic audio if the enhanced playback fails
+                        playBasicAudio(audioData);
+                    });
+                } else {
+                    console.log('Falling back to basic audio');
+                    // Fallback to basic audio
+                    playBasicAudio(audioData);
+                }
+            });
+        }
+
+        function playBasicAudio(audioData) {
+            try {
+                const audio = new Audio(`data:audio/mp3;base64,${audioData}`);
+                audio.volume = 1.0;
+                
+                // Mobile-specific settings
+                audio.playsinline = true;
+                audio.setAttribute('webkit-playsinline', 'true');
+                
+                // Play with retry logic
+                const playWithRetry = async (retries = 3) => {
+                    try {
+                        await audio.play();
+                    } catch (error) {
+                        console.warn(`Audio play attempt failed (${retries} retries left):`, error);
+                        if (retries > 0) {
+                            setTimeout(() => playWithRetry(retries - 1), 100);
+                        }
+                    }
+                };
+                
+                playWithRetry();
+            } catch (error) {
+                console.error('Basic audio playback failed:', error);
+            }
+        }
+
+        // Initialize audio handling
+        document.addEventListener('DOMContentLoaded', function() {
+            // Reset retries counter
+            window.audioManagerRetries = 0;
+            
+            // Enable audio on first interaction (important for iOS)
+            const enableAudio = async () => {
+                try {
+                    // Try to get the audio manager
+                    const audioManager = await getAudioManager();
+                    if (audioManager) {
+                        await audioManager.setupMobileAudio();
+                    }
+                    
+                    // Also try to initialize a basic audio context
+                    const audio = new Audio();
+                    audio.volume = 1.0;
+                    await audio.play().catch(() => {});
+                } catch (error) {
+                    console.warn('Audio initialization error:', error);
+                }
+                
+                document.removeEventListener('touchstart', enableAudio);
+                document.removeEventListener('click', enableAudio);
+            };
+            
+            document.addEventListener('touchstart', enableAudio, { once: true });
+            document.addEventListener('click', enableAudio, { once: true });
+            
+            // Initialize audio control button
+            const audioButton = document.getElementById('toggle-audio');
+            isSpeechEnabled = localStorage.getItem('speechEnabled') !== 'false';
+            updateAudioButtonState();
+            
+            audioButton.addEventListener('click', function() {
+                isSpeechEnabled = !isSpeechEnabled;
+                localStorage.setItem('speechEnabled', isSpeechEnabled);
+                updateAudioButtonState();
+                
+                if (!isSpeechEnabled && window.currentAudio) {
+                    window.currentAudio.pause();
+                    window.currentAudio = null;
+                }
+            });
+        });
+
+        function updateAudioButtonState() {
+            const audioButton = document.getElementById('toggle-audio');
+            const audioIcon = audioButton.querySelector('.audio-icon');
+            
+            if (isSpeechEnabled) {
+                audioIcon.textContent = '🔊';
+                audioButton.classList.remove('muted');
+            } else {
+                audioIcon.textContent = '🔇';
+                audioButton.classList.add('muted');
+            }
+        }
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && window.currentAudio) {
+                window.currentAudio.pause();
+                window.currentAudio = null;
+            }
+        });
+
+        // Add voice recognition functionality
+        let recognition = null;
+        let isListening = false;
+        let isSpanishFailed = false;
+        let silenceTimer = null;
+        let lastSpeechTime = Date.now();
+        let finalMessageToSend = '';  // Store the final message
+
+        function initializeSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.maxAlternatives = 1;
+                
+                // Always start with Spanish recognition
+                recognition.lang = 'es-ES';
+                
+                recognition.onstart = function() {
+                    isListening = true;
+                    lastSpeechTime = Date.now();
+                    document.getElementById('voice-input').classList.add('listening');
+                    showVoiceFeedback(currentLanguage === 'es' ? 'Escuchando...' : 'Listening...');
+                };
+
+                recognition.onend = function() {
+                    isListening = false;
+                    document.getElementById('voice-input').classList.remove('listening');
+                    hideVoiceFeedback();
+                    clearTimeout(silenceTimer);
+
+                    if (finalMessageToSend) {
+                        document.getElementById('message-input').value = finalMessageToSend;
+                        setTimeout(() => {
+                            sendMessage();
+                            finalMessageToSend = '';
+                        }, 100);
+                    }
+                };
+
+                recognition.onresult = function(event) {
+                    lastSpeechTime = Date.now();
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript = event.results[i][0].transcript.trim();
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+
+                    if (interimTranscript) {
+                        showVoiceFeedback(interimTranscript);
+                        document.getElementById('message-input').value = interimTranscript;
+                    }
+
+                    if (finalTranscript) {
+                        // Check language of final transcript
+                        const detectedLang = detectLanguage(finalTranscript);
+                        if (detectedLang === 'es' || recognition.lang === 'es-ES') {
+                            currentLanguage = 'es';
+                            finalMessageToSend = finalTranscript;
+                            recognition.stop();
+                        } else {
+                            currentLanguage = 'en';
+                            finalMessageToSend = finalTranscript;
+                            recognition.stop();
+                        }
+                        updateUILanguage(currentLanguage);
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    isListening = false;
+                    document.getElementById('voice-input').classList.remove('listening');
+                    hideVoiceFeedback();
+                };
+            }
+        }
+
+        function showVoiceFeedback(message) {
+            const feedback = document.getElementById('voice-feedback');
+            feedback.textContent = message;
+            feedback.classList.add('visible');
+        }
+
+        function hideVoiceFeedback() {
+            const feedback = document.getElementById('voice-feedback');
+            feedback.classList.remove('visible');
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                initializeSpeechRecognition();
+            }
+
+            if (isListening) {
+                recognition.stop();
+            } else {
+                // Reset Spanish failed flag
+                isSpanishFailed = false;
+                // Always start with Spanish
+                recognition.lang = 'es-ES';
+                recognition.start();
+            }
+        }
+
+        // Initialize voice input button
+        document.addEventListener('DOMContentLoaded', function() {
+            const voiceButton = document.getElementById('voice-input');
+            voiceButton.addEventListener('click', toggleVoiceInput);
+            
+            // Initialize speech recognition
+            initializeSpeechRecognition();
+        });
+
+        connectWebSocket();
+
+        // Add audio loading state management
+        const audioFiles = {
+            happy: '/static/assets/sounds/happy.mp3',
+            caring: '/static/assets/sounds/caring.mp3',
+            listening: '/static/assets/sounds/listening.mp3'
+        };
+
+        // Preload audio files
+        const audioElements = {};
+        Object.entries(audioFiles).forEach(([key, src]) => {
+            const audio = new Audio();
+            audio.preload = 'auto';
+            audio.src = src;
+            
+            // Mobile-specific settings
+            audio.playsinline = true;
+            audio.setAttribute('webkit-playsinline', 'true');
+            
+            // Error handling
+            audio.onerror = () => {
+                console.warn(`Failed to load audio: ${key}`);
+                // Fallback to silent operation if audio fails
+                audioElements[key] = null;
+            };
+            
+            audioElements[key] = audio;
+        });
+
+        // Function to play audio with fallback
+        function playAudioWithFallback(type) {
+            const audio = audioElements[type];
+            if (audio) {
+                audio.currentTime = 0;
+                audio.volume = 1.0;
+                audio.play().catch(error => {
+                    console.warn('Audio playback failed:', error);
+                    // Fallback behavior - continue without audio
+                });
+            }
+        }
     </script>
 </body>
 </html>

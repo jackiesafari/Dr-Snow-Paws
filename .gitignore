@@ -1,2 +1,18 @@
 .env
 .vercel
+
+# Environments
+venv/
+venv311/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS-specific
+.DS_Store
+
+# IDE specific
+.vscode/
+.idea/

@@ -127,7 +127,7 @@ async def websocket_test():
 handler = Mangum(app)
 
 if __name__ == "__main__":
-    # Get port from environment variable for Railway
-    port = int(os.environ.get("PORT", 8080))
+    # Get port from environment variable or use 8000 as default
+    port = int(os.environ.get("PORT", 8000))
     logger.info(f"Starting server on port {port}")
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

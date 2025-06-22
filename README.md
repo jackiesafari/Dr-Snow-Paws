@@ -39,31 +39,82 @@ All collected information is logged for later use by medical professionals.
 
 ℹ️ The first time, things might take extra time to get started since VAD (Voice Activity Detection) model needs to be downloaded.
 
-## Get started
-
-### Prerequisites
-- Python 3.8 - 3.11 (Python 3.13 is not yet supported)
+## Prerequisites
+- Python 3.11 (recommended, as Python 3.13 is not yet supported)
 - pip
 - virtualenv or venv
 
-### Installation
+## Installation
 
-```python
-python3 -m venv venv
-source venv/bin/activate  # On Windows, use: venv\Scripts\activate
-pip install -r requirements.txt
-
-cp env.example .env # and add your credentials
-```
-
-
-## Run the server
-
+1. Clone the repository:
 ```bash
-python3 main.py
+git clone <repository-url>
+cd Dr-Snow-Paws
 ```
 
-Then, visit `http://localhost:7860/` in your browser to start a chatbot session.
+2. Create and activate a virtual environment:
+```bash
+# Create virtual environment with Python 3.11
+python3.11 -m venv venv311
+
+# Activate virtual environment
+# On macOS/Linux:
+source venv311/bin/activate
+# On Windows:
+# venv311\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install --upgrade pip wheel setuptools
+pip install -r requirements.txt
+```
+
+4. Set up environment variables:
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env and add your OpenAI API key
+# OPENAI_API_KEY=your_openai_api_key_here
+```
+
+## Running the Server
+
+1. Make sure you're in the project directory:
+```bash
+cd Dr-Snow-Paws
+```
+
+2. Activate the virtual environment if not already activated:
+```bash
+source ../venv311/bin/activate  # Adjust path if needed
+```
+
+3. Start the server:
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+4. Open your browser and visit:
+```
+http://localhost:8000
+```
+
+## Troubleshooting
+
+If you encounter any issues:
+
+1. Make sure you're using Python 3.11 (not 3.13)
+2. Verify you're in the correct directory (Dr-Snow-Paws)
+3. Check that the virtual environment is activated
+4. Ensure port 8000 is not in use by another process
+5. Verify your OpenAI API key is set in the .env file
+
+To check if the server is running:
+```bash
+curl http://localhost:8000/health
+```
 
 ## Build and test the Docker image
 
